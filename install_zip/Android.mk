@@ -135,6 +135,7 @@ $(MULTIROM_UNINST_TARGET): signapk bbootimg
 	@rm -f $(MULTIROM_UNINST_TARGET).zip $(MULTIROM_UNINST_TARGET)-unsigned.zip
 	@cd $(MULTIROM_UNINST_DIR) && zip -qr ../$(notdir $@)-unsigned.zip *
 	@java -Djava.library.path=$(SIGNAPK_JNI_LIBRARY_PATH) -jar $(HOST_OUT_JAVA_LIBRARIES)/signapk.jar $(DEFAULT_SYSTEM_DEV_CERTIFICATE).x509.pem $(DEFAULT_SYSTEM_DEV_CERTIFICATE).pk8 $(MULTIROM_UNINST_TARGET)-unsigned.zip $(MULTIROM_UNINST_TARGET).zip
+	@$(install_zip_path)/rename_zip.sh $(MULTIROM_UNINST_TARGET) $(TARGET_DEVICE) $(PWD)/$(multirom_local_path)/version.h $(MR_DEVICE_SPECIFIC_VERSION)
 	@echo ----- Made MultiROM uninstaller -------- $@.zip
 
 .PHONY: multirom_uninstaller
