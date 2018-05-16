@@ -35,7 +35,11 @@ common_C_FLAGS := -O3 -funsafe-math-optimizations
 ifeq ($(MR_INPUT_TYPE),)
     MR_INPUT_TYPE := type_b
 endif
-common_SRC_FILES += input_$(MR_INPUT_TYPE).c
+ifeq ($(MR_CUSTOM_INPUT_TYPE),)
+    common_SRC_FILES += input_$(MR_INPUT_TYPE).c
+else
+    common_SRC_FILES += ../../../../$(MR_CUSTOM_INPUT_TYPE)
+endif
 
 ifeq ($(MR_USE_QCOM_OVERLAY),true)
     common_C_FLAGS += -DMR_USE_QCOM_OVERLAY
