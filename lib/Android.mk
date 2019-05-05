@@ -29,6 +29,7 @@ common_C_INCLUDES := $(multirom_local_path)/lib \
     external/libpng \
     external/zlib \
     external/freetype/include \
+    external/selinux/libselinux/include \
     system/extras/libbootimg/include \
     external/libdrm \
     external/libdrm/include/drm
