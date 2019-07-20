@@ -114,7 +114,10 @@ struct multirom_status
     int enable_kmsg_logging;
     int hide_internal;
     char *int_display_name;
-    char os_version[6];
+    char os_version[20];
+    char os_level[20];
+    char os_version_raw[20];
+    char os_level_raw[20];
     int rotation;
     int force_generic_fb;
     int use_primary_kernel;
