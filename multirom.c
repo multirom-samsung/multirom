@@ -22,9 +22,11 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/klog.h>
 #include <sys/vfs.h>
@@ -85,7 +87,7 @@ static volatile int run_usb_refresh = 0;
 static pthread_t usb_refresh_thread;
 static pthread_mutex_t parts_mutex = PTHREAD_MUTEX_INITIALIZER;
 static void (*usb_refresh_handler)(void) = NULL;
-void copy_init_contents(DIR* d, char* dirpath, char* target, bool preserve_contexts);
+void copy_init_contents(DIR* d, char* dirpath, char* target, bool preserve_contexts, char* exclude_dirs);
 bool LoadSplitPolicy();
 
 
@@ -93,7 +95,7 @@ void disable_dtb_fstab(char* partition) {
     if (access("status", F_OK)) {
 #ifdef MR_USE_MROM_FAKEFSTAB
         DIR* dir = opendir("/proc/device-tree/firmware/android");
-        copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab");
+        copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab", NULL);
 #endif
         FILE* fp = fopen("status", "w");
         fprintf(fp, "disabled");
@@ -118,7 +120,7 @@ void remove_dtb_fstab() {
     mkdir("/dummy_fw", S_IFDIR);
 #ifdef MR_USE_MROM_FAKEFSTAB
     DIR* dir = opendir("/proc/device-tree/firmware/android");
-    copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab");
+    copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab", NULL);
     if (!mount("/dummy_fw", "/fakefstab", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
 #else
     if (!mount("/dummy_fw", "/proc/device-tree/firmware", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
@@ -336,9 +338,20 @@ int multirom_get_current_oslevel(struct multirom_status *s)
         return -1;
     }
 
-    char* secondary_os_version = libbootimg_get_osversion(&secondary_img.hdr, true);
+    char* secondary_os_version = libbootimg_get_osversion(&secondary_img.hdr, false);
+    char* secondary_os_level = libbootimg_get_oslevel(&secondary_img.hdr, false);
+    char* secondary_os_version_raw = libbootimg_get_osversion(&secondary_img.hdr, true);
+    char* secondary_os_level_raw = libbootimg_get_oslevel(&secondary_img.hdr, true);
 
-    memcpy(s->os_version, secondary_os_version, 6);
+    memset(s->os_version, 0, sizeof(s->os_version));
+    memset(s->os_level, 0, sizeof(s->os_level));
+    memset(s->os_version_raw, 0, sizeof(s->os_version_raw));
+    memset(s->os_level_raw, 0, sizeof(s->os_level_raw));
+
+    memcpy(s->os_version, secondary_os_version, strlen(secondary_os_version));
+    memcpy(s->os_level, secondary_os_level, strlen(secondary_os_level));
+    memcpy(s->os_version_raw, secondary_os_version_raw, strlen(secondary_os_version_raw));
+    memcpy(s->os_level_raw, secondary_os_level_raw, strlen(secondary_os_level_raw));
     return 0;
 }
 
@@ -1533,10 +1546,10 @@ int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to
                     decompress_rd("/.temprd", "/.newrd", &type);
                     if (!access("/.newrd/second", F_OK)) {
                         DIR* dir = opendir("/.newrd/second");
-                        copy_init_contents(dir, "/.newrd/second", "/", true);
+                        copy_init_contents(dir, "/.newrd/second", "/", true, "system");
                     } else {
                         DIR* dir = opendir("/.newrd");
-                        copy_init_contents(dir, "/.newrd", "/", true);
+                        copy_init_contents(dir, "/.newrd", "/", true, "system");
                     }
                 }
 
@@ -1667,14 +1680,14 @@ bool is_symlink(const char *filename)
     }
 }
 
-void copy_init_contents(DIR* d, char* dirpath, char* target, bool preserve_contexts)
+void copy_init_contents(DIR* d, char* dirpath, char* target, bool preserve_contexts, char* exclude_dir)
 {
     char in[256];
     char out[256];
     memset(in, 0, 256);
     memset(out, 0, 256);
     ERROR("copying dir %s\n", dirpath);
-    clone_dir(d, dirpath, target, preserve_contexts, (char*)"system");
+    clone_dir(d, dirpath, target, preserve_contexts, exclude_dir);
 }
 
 bool GetVendorMappingVersion(char** plat_vers)
@@ -1904,7 +1917,7 @@ int multirom_prep_android_mounts(struct multirom_status *s, struct multirom_rom 
        rom_quirks_on_initrd_finalized();
        LoadSplitPolicy();
        DIR* dir = opendir("/system_root");
-       copy_init_contents(dir, "/system_root", "/", true);
+       copy_init_contents(dir, "/system_root", "/", true, "system");
    }
 
     sprintf(path, "%s/boot", rom->base_path);
@@ -1913,13 +1926,36 @@ int multirom_prep_android_mounts(struct multirom_status *s, struct multirom_rom 
         rom_quirks_on_initrd_finalized();
         LoadSplitPolicy();
     }
-    copy_init_contents(dir, path, "/", false);
-    if (!access("/system/bin/init", F_OK) && is_symlink("/system_root/init")) {
+    copy_init_contents(dir, path, "/", false, "system");
+    if (system_as_root && !access("/system/bin/init", F_OK) && is_symlink("/system_root/init")) {
         char* context = calloc(1, 50);
+        char* initPath = "/main_init";
         getfilecon("/system/bin/init", &context);
-        copy_file_with_context("/system/bin/init", "/main_init", "u:object_r:rootfs:s0");
+        if (multirom_path_exists("/", "/.backup/init")) {
+            copy_file_with_context("/system/bin/init", "/main_init", "u:object_r:rootfs:s0");
+        } else {
+            copy_file_with_context("/system/bin/init", "/.backup/init", "u:object_r:rootfs:s0");
+            initPath = "/.backup/init";
+        }
+
+        char *addr;
+        int initfd = open(initPath, O_RDWR);
+        struct stat st;
+        lstat(initPath, &st);
+        size_t size = st.st_size;
+        addr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, initfd, 0);
+        for (char *p = addr; p < addr + size; ++p) {
+            if (memcmp(p, "/system/bin/init", sizeof("/system/bin/init")) == 0) {
+                // Force execute /init instead of /system/bin/init
+                INFO("Patch init: [/system/bin/init] -> [/init]\n");
+                strcpy(p, "/init");
+                p += sizeof("/system/bin/init") - 1;
+            }
+        }
+        munmap(addr, size);
+        close(initfd);
         chmod("/main_init", EXEC_MASK_NEW);
-    } else if (!is_symlink("/system_root/init") && !access("/system_root/init", F_OK)) {
+    } else if (system_as_root && !is_symlink("/system_root/init") && !access("/system_root/init", F_OK)) {
         char* context = calloc(1, 50);
         getfilecon("/system_root/init", &context);
         copy_file_with_context("/system_root/init", "/main_init", context);
