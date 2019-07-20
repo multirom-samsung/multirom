@@ -85,7 +85,6 @@ static volatile int run_usb_refresh = 0;
 static pthread_t usb_refresh_thread;
 static pthread_mutex_t parts_mutex = PTHREAD_MUTEX_INITIALIZER;
 static void (*usb_refresh_handler)(void) = NULL;
-void copy_dir_contents(DIR* d, char* dirpath, char* target);
 void copy_init_contents(DIR* d, char* dirpath, char* target, bool preserve_contexts);
 bool LoadSplitPolicy();
 
@@ -1675,7 +1674,7 @@ void copy_init_contents(DIR* d, char* dirpath, char* target, bool preserve_conte
     memset(in, 0, 256);
     memset(out, 0, 256);
     ERROR("copying dir %s\n", dirpath);
-    clone_dir(d, dirpath, target, preserve_contexts);
+    clone_dir(d, dirpath, target, preserve_contexts, (char*)"system");
 }
 
 bool GetVendorMappingVersion(char** plat_vers)
