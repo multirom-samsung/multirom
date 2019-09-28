@@ -53,7 +53,7 @@ void multirom_klog_init(void) {
     }
 }
 
-#define LOG_BUF_MAX 512
+#define LOG_BUF_MAX 51200
 
 void multirom_klog_writev(int level, const struct iovec* iov, int iov_count) {
     if (level > klog_level) return;
