@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 LOCAL_C_INCLUDES += $(multirom_local_path) $(multirom_local_path)/lib
 LOCAL_SRC_FILES:= \
-    trampoline.c \
+    trampoline.cpp \
     devices.c \
     adb.c \
 
@@ -67,5 +67,7 @@ endif
 ifeq ($(MR_USE_DEBUGFS_MOUNT),true)
     LOCAL_CFLAGS += -DMR_USE_DEBUGFS_MOUNT
 endif
+
+LOCAL_CPPFLAGS += $(LOCAL_CFLAGS)
 
 include $(BUILD_EXECUTABLE)

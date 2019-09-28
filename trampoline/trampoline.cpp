@@ -15,7 +15,7 @@
  * along with MultiROM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE
+extern "C" {
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <errno.h>
@@ -24,6 +24,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <mntent.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -51,6 +52,10 @@
 #endif
 
 #include "trampoline.h"
+}
+#include <iostream>
+#include <string>
+#include <vector>
 
 static char path_multirom[64] = { 0 };
 
@@ -86,7 +91,7 @@ int fork_and_exec_with_stdout(char *cmd, char *const *envp)
     {
         close(fd[1]);
 
-        char *res = malloc(512);
+        char *res = (char*)malloc(512);
         char buffer[512];
         int size = 512, written = 0, len;
         while ((len = read(fd[0], buffer, sizeof(buffer))) > 0)
@@ -94,7 +99,7 @@ int fork_and_exec_with_stdout(char *cmd, char *const *envp)
             if(written + len + 1 > size)
             {
                 size = written + len + 256;
-                res = realloc(res, size);
+                res = (char*)realloc(res, size);
             }
             memcpy(res+written, buffer, len);
             written += len;
@@ -261,6 +266,7 @@ static int mount_and_run(struct fstab *fstab)
     }
 
     mkdir(REALDATA, 0755);
+    mkdir("/data", 0755);
 
     if(try_mount_all_entries(fstab, datap) < 0)
     {
@@ -364,12 +370,79 @@ static void fixup_symlinks(void)
     }
 }
 
+static void switch_root(const char* path) {
+    INFO("Switch root to %s\n", path);
+    FILE *fp =  setmntent("/proc/mounts", "re");
+    if (fp) {
+        struct mntent mentry;
+        char buf[4096];
+        std::vector<std::string> v;
+        bool add = true;
+        while (getmntent_r(fp, &mentry, buf, sizeof(buf))) {
+            if (!strcmp(mentry.mnt_dir, "/") || !strcmp(mentry.mnt_dir, path)) {
+                INFO("skip %s\n", mentry.mnt_dir);
+                continue;
+            }
+            for (auto i : v) {
+                if (!strncmp(mentry.mnt_dir, i.data(), i.length())) {
+                    add = false;
+                    break;
+                } else {
+                    add = true;
+                }
+            }
+            if (add) {
+                v.emplace_back(mentry.mnt_dir);
+                INFO("%s added to vector\n", mentry.mnt_dir);
+            } else {
+                INFO("%s not added to vector\n", mentry.mnt_dir);
+            }
+        }
+        endmntent(fp);
+            for (auto i : v) {
+                char* new_path = NULL;
+                asprintf(&new_path, "%s%s", path, i.data());
+                INFO("move mount point %s to %s\n", i.data(), new_path);
+                mkdir(new_path, 0755);
+                mount(i.data(), new_path, NULL, MS_MOVE, NULL);
+            }
+    }
+}
+
 static int do_cmdline(int argc, char *argv[])
 {
     int i;
     char *inject_path = NULL;
     char *mrom_dir = NULL;
     int force_inject = 0;
+
+    if (argc > 1 && !strcmp(argv[1], "selinux_setup")) {
+        INFO("multirom second stage init\n");
+        //remove_dir("/system");
+        switch_root("/system_root");
+		int error = chdir("/system_root");
+        if (error == -1) {
+            INFO("chdir failed!!: %s\n", strerror(errno));
+        } else {
+            INFO("chdir returned %d\n", error);
+        }
+        error = mount("/system_root", "/", NULL, MS_MOVE, NULL);
+        if (error == -1) {
+            INFO("mount failed!!: %s\n", strerror(errno));
+        } else {
+            INFO("mount returned %d\n", error);
+        }
+        error = chroot(".");
+        if (error == -1) {
+            INFO("chroot failed!!: %s\n", strerror(errno));
+        } else {
+            INFO("chroot returned %d\n", error);
+        }
+        int res;
+        static char *const cmd[] = { (char *)"/init", (char *)"selinux_setup", NULL };
+        res = execv(cmd[0], cmd);
+        return 0;
+    }
 
     for(i = 1; i < argc; ++i)
     {
@@ -462,7 +535,7 @@ char *trampoline_get_klog(void)
     if      (len < 16*1024)      len = 16*1024;
     else if (len > 16*1024*1024) len = 16*1024*1024;
 
-    char *buff = malloc(len + 1);
+    char *buff = (char*)malloc(len + 1);
     len = klogctl(3, buff, len);
     if(len <= 0)
     {
@@ -517,7 +590,7 @@ int main(int argc, char *argv[])
         return do_cmdline(argc, argv);
 
     int res;
-    static char *const cmd[] = { "/init", NULL };
+    static char *const cmd[] = { (char *)"/init", NULL };
 
     umask(000);
 
@@ -597,7 +670,7 @@ run_main_init:
 
     fixup_symlinks();
 
-    char* context = calloc(1, 50);
+    char* context = (char*)calloc(1, 50);
     getfilecon("/main_init", &context);
     INFO("context of main_init is %s", context);
     chmod("/main_init", EXEC_MASK);
