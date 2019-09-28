@@ -138,6 +138,11 @@ void rom_quirks_on_initrd_finalized(void)
 
     // walk over all _regular_ files in /
     char* path = "/system/etc/selinux/plat_file_contexts";
+    char* mnt_path = "/system/etc/selinux/plat_file_contexts";
+    char* pathsar = "/system_root/system/etc/selinux/plat_file_contexts";
+    if (!access(pathsar, F_OK)) {
+        path = pathsar;
+    }
     if (!access(path, F_OK)) {
         char buf;
         int sourcefile, destfile, n;
@@ -200,8 +205,13 @@ void rom_quirks_on_initrd_finalized(void)
         closedir(d);
     }
 
-    if (!access(path, F_OK)) {
-        if(!mount("/plat_file_contexts", path, "ext4", MS_BIND, "discard,nomblk_io_submit")) {
+    if (access("/system/etc/selinux", F_OK)) {
+        mkdir_with_perms("/system/etc/", 0755, "root", "root");
+        mkdir_with_perms("/system/etc/selinux", 0755, "root", "root");
+        copy_file("/plat_file_contexts", "/system/etc/selinux/plat_file_contexts");
+    }
+    if (!access(mnt_path, F_OK)) {
+        if(!mount("/plat_file_contexts", mnt_path, "ext4", MS_BIND, "discard,nomblk_io_submit")) {
             INFO("file_contexts bind mounted in system\n");
         } else {
             ERROR("file_contexts bind mount failed! %s\n", strerror(errno));
@@ -246,6 +256,11 @@ char* convert_to_raw(char* str) {
 void rom_quirks_change_patch_and_osver(struct multirom_status *s, struct multirom_rom *to_boot) {
 
     char* path = "/system/build.prop";
+    char* mnt_path = "/system/build.prop";
+    char* pathsar = "/system_root/system/build.prop";
+    if (!access(pathsar, F_OK)) {
+        path = pathsar;
+    }
     char* patchstring = NULL, *stringtoappend = NULL;
     char* existing_ver = NULL;
     char* existing_level = NULL;
@@ -313,8 +328,11 @@ void rom_quirks_change_patch_and_osver(struct multirom_status *s, struct multiro
         close(destfile);
 
 
-        if (!access(path, F_OK)) {
-            if(!mount("/build.prop", path, "ext4", MS_BIND, "discard,nomblk_io_submit")) {
+        if (access("/system/build.prop", F_OK)) {
+            copy_file("/build.prop", "/system/build.prop");
+        }
+        if (!access(mnt_path, F_OK)) {
+            if(!mount("/build.prop", mnt_path, "ext4", MS_BIND, "discard,nomblk_io_submit")) {
                 INFO("build.prop bind mounted in system\n");
             } else {
                 ERROR("build.prop bind mount failed! %s\n", strerror(errno));

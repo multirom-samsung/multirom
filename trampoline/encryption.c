@@ -155,7 +155,7 @@ int encryption_cleanup(void)
     tramp_hook_encryption_cleanup();
 #endif
     if (lstat("/vendor_boot", &stat) == 0) {
-        remove("/vendor");
+        unlink("/vendor");
         rename("/vendor_boot", "/vendor");
     }
 

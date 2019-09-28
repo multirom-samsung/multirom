@@ -378,7 +378,18 @@ int setattr(const char *path, struct file_attr *a) {
 	return 0;
 }
 
-void clone_dir(DIR* d, char* dirpath, char* target, bool preserve_context, char* exclude_dir) {
+bool is_in_list(char** stack, char* needle) {
+    int i = 0;
+    while (stack[i] != NULL) {
+        if (!strcmp(stack[i], needle)) {
+            return true;
+        }
+        i++;
+    }
+    return false;
+}
+
+void clone_dir(DIR* d, char* dirpath, char* target, bool preserve_context, char** exclude_dir) {
 
     char in[256];
     char out[256];
@@ -392,7 +403,7 @@ void clone_dir(DIR* d, char* dirpath, char* target, bool preserve_context, char*
     ERROR("copying dir %s to %s\n", dirpath, target);
     while((dp = readdir(d)))
     {
-        if((dp->d_name[0] == '.' && strlen(dp->d_name) == 1) || (dp->d_name[0] == '.' && dp->d_name[1] == '.') || (exclude_dir && !strcmp(dp->d_name, exclude_dir)))
+        if((dp->d_name[0] == '.' && strlen(dp->d_name) == 1) || (dp->d_name[0] == '.' && dp->d_name[1] == '.') || (exclude_dir && exclude_dir[0] && is_in_list(exclude_dir, dp->d_name)))
             continue;
 
         sprintf(in, "%s/%s", dirpath, dp->d_name);
@@ -438,7 +449,7 @@ void clone_dir(DIR* d, char* dirpath, char* target, bool preserve_context, char*
 }
 
 
-void copy_dir_contents(DIR* d, char* dirpath, char* target, char* exclude_dir) {
+void copy_dir_contents(DIR* d, char* dirpath, char* target, char** exclude_dir) {
     clone_dir(d, dirpath, target, false, exclude_dir);
 }
 
