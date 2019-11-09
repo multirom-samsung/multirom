@@ -205,7 +205,8 @@ void rom_quirks_on_initrd_finalized(void)
         closedir(d);
     }
 
-    if (access("/system/etc/selinux", F_OK)) {
+    if (access("/system/etc/selinux/plat_file_contexts", F_OK)) {
+        mkdir_with_perms("/system/", 0755, "root", "root");
         mkdir_with_perms("/system/etc/", 0755, "root", "root");
         mkdir_with_perms("/system/etc/selinux", 0755, "root", "root");
         copy_file("/plat_file_contexts", "/system/etc/selinux/plat_file_contexts");
@@ -216,6 +217,8 @@ void rom_quirks_on_initrd_finalized(void)
         } else {
             ERROR("file_contexts bind mount failed! %s\n", strerror(errno));
         }
+    } else {
+        INFO("No mount point to bind!!");
     }
 
     if (failed_file_contexts_injections)
