@@ -1526,14 +1526,17 @@ int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to
         {
             if (!access(DT_FSTAB_PATH, F_OK)) {
                 if (mount_dtb_fstab("system") == 0) {
-                    disable_dtb_fstab("system");
+                    rom_quirks_on_initrd_finalized();
+                    umount("/system_root");
+                    //disable_dtb_fstab("system");
                 }
                 //if (mount_dtb_fstab("vendor") == 0) {
                     //disable_dtb_fstab("vendor");
                // }
                // remove_dtb_fstab();
+            } else {
+                rom_quirks_on_initrd_finalized();
             }
-            rom_quirks_on_initrd_finalized();
             //LoadSplitPolicy();
             break;
         }
@@ -1752,6 +1755,7 @@ bool LoadSplitPolicy()
     if (!vend_plat_vers) {
         return false;
     }
+    vend_plat_vers[4] = '\0';
     char* mapping_file = NULL;
     asprintf(&mapping_file, "/system/etc/selinux/mapping/%s.cil",vend_plat_vers);
     // vendor_sepolicy.cil and plat_pub_versioned.cil are the new design to replace

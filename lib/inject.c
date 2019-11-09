@@ -358,6 +358,7 @@ int inject_cmdline(struct bootimg *image)
 
         libbootimg_set_cmdline(&image->hdr, newcmdline);
         free(newcmdline);
+        free(cmdline);
     }
 
     return res;
