@@ -383,6 +383,7 @@ int multirom(const char *rom_to_boot)
 
     multirom_load_status(&s);
     multirom_dump_status(&s);
+    multirom_get_current_oslevel(&s);
 
     if (s.enable_kmsg_logging != 0)
     {
@@ -525,7 +526,6 @@ int multirom(const char *rom_to_boot)
 
         if (s.is_second_boot != 0)
         {
-            multirom_get_current_oslevel(&s);
             // Restore primary boot.img, and continue
             if (nokexec_restore_primary_and_cleanup() < 0)
                 MR_NO_KEXEC_ABORT;
@@ -1652,7 +1652,7 @@ char *multirom_find_fstab_in_rc(const char *rcfile)
 
 // UPDATE: fw_mounter gets shut down by SELinux on 6.0, inject .rc files and file_contexts instead.
 
-static int multirom_inject_fw_mounter(struct multirom_status *s, struct fstab_part *fw_part)
+/*static int multirom_inject_fw_mounter(struct multirom_status *s, struct fstab_part *fw_part)
 {
     char buf[512];
 
@@ -1677,7 +1677,7 @@ static int multirom_inject_fw_mounter(struct multirom_status *s, struct fstab_pa
 
     rcadditions_append_trigger(&s->rc, "fs", "\n");
     return 0;
-}
+}*/
 
 bool is_symlink(const char *filename)
 {
@@ -1842,7 +1842,7 @@ bool LoadSplitPolicy()
     return true;
 }
 
-int multirom_prep_android_mounts(struct multirom_status *s, struct multirom_rom *rom)
+int multirom_prep_android_mounts(__unused struct multirom_status *s, struct multirom_rom *rom)
 {
     char path[256];
     char *fstab_name = NULL;
@@ -2083,7 +2083,8 @@ int multirom_prep_android_mounts(struct multirom_status *s, struct multirom_rom 
         snprintf(from, sizeof(from), "%s/firmware.img", rom->base_path);
         fw_part->device = realloc(fw_part->device, strlen(from)+1);
         strcpy(fw_part->device, from);
-        multirom_inject_fw_mounter(s, fw_part);
+        multirom_mount_image(from, MR_FIRMWARE_DIR, "vfat", MS_RDONLY, "shortname=lower,uid=0,gid=1000,dmask=227,fmask=337,context=u:object_r:firmware_file:s0");
+        //multirom_inject_fw_mounter(s, fw_part);
     }
 
 #if MR_DEVICE_HOOKS >= 1
@@ -2231,7 +2232,7 @@ exit:
     return res;
 }
 
-int multirom_create_media_link(struct multirom_status *s)
+int multirom_create_media_link(__unused struct multirom_status *s)
 {
     int media_new = 0;
     char* buildprop = "/system/build.prop";
@@ -2283,6 +2284,7 @@ int multirom_create_media_link(struct multirom_status *s)
         return -1;
     }
 
+#if 0
     if(api_level >= 17)
     {
         char buf[16];
@@ -2312,6 +2314,7 @@ int multirom_create_media_link(struct multirom_status *s)
         // but can't do it here because selinux was not initialized
         rcadditions_append_trigger(&s->rc, "post-fs-data", "    restorecon " LAYOUT_VERSION "\n");
     }
+#endif
 
     return 0;
 }
