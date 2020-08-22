@@ -32,16 +32,18 @@
 #include "../trampoline_encmnt/encmnt_defines.h"
 #include "../hooks.h"
 
+extern int e4crypt_install_keyring();
+
 static char encmnt_cmd_arg[64] = { 0 };
 static char *const encmnt_cmd[] = { "/mrom_enc/trampoline_encmnt", encmnt_cmd_arg, NULL };
 #ifdef MR_ENCRYPTION_FAKE_PROPERTIES
-static char *const encmnt_envp[] = { "LD_LIBRARY_PATH=/mrom_enc/", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", NULL };
+static char *const encmnt_envp[] = { "LD_CONFIG_FILE='/mrom_enc/ld.config.txt'", "LD_LIBRARY_PATH=/mrom_enc/", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", NULL };
 #else
-static char *const encmnt_envp[] = { "LD_LIBRARY_PATH=/mrom_enc/", NULL };
+static char *const encmnt_envp[] = { "LD_CONFIG_FILE='/mrom_enc/ld.config.txt'", "LD_LIBRARY_PATH=/mrom_enc/", NULL };
 #endif
 static int g_decrypted = 0;
 
-int encryption_before_mount(__unused struct fstab *fstab)
+int encryption_before_mount(__unused struct fstab *fstab, __unused bool isFbe)
 {
     int exit_code = -1;
     char *output = NULL, *itr;
@@ -80,52 +82,70 @@ int encryption_before_mount(__unused struct fstab *fstab)
 
     INFO("Running trampoline_encmnt\n");
 
-    strcpy(encmnt_cmd_arg, "decrypt");
+    if (isFbe) {
+        //rename("/realdata", "/data");
+        int err = mount("/realdata", "/data", NULL, MS_MOVE, NULL);
+        INFO("err %d %s\n", err, strerror(errno));
+        int ret = e4crypt_install_keyring();
+        strcpy(encmnt_cmd_arg, "decryptfbe");
+    } else {
+        strcpy(encmnt_cmd_arg, "decrypt");
+    }
     output = run_get_stdout_with_exit_with_env(encmnt_cmd, &exit_code, encmnt_envp);
-    if(exit_code != 0 || !output)
+    if(exit_code != 0 || (!isFbe && !output))
     {
         ERROR("Failed to run trampoline_encmnt, exit code %d: %s\n", exit_code, output);
         goto exit;
     }
 
-    itr = output + strlen(output) - 1;
-    while(itr >= output && isspace(*itr))
-        *itr-- = 0;
+    if (!isFbe || exit_code != 0) {
+        itr = output + strlen(output) - 1;
+        while(itr >= output && isspace(*itr))
+            *itr-- = 0;
 
-    if(strcmp(output, ENCMNT_BOOT_INTERNAL_OUTPUT) == 0)
-    {
-        INFO("trampoline_encmnt requested to boot internal ROM.\n");
-        res = ENC_RES_BOOT_INTERNAL;
-        goto exit;
+        if(strcmp(output, ENCMNT_BOOT_INTERNAL_OUTPUT) == 0)
+        {
+            INFO("trampoline_encmnt requested to boot internal ROM.\n");
+            res = ENC_RES_BOOT_INTERNAL;
+            goto exit;
+        }
+
+        if(strcmp(output, ENCMNT_BOOT_RECOVERY_OUTPUT) == 0)
+        {
+            INFO("trampoline_encmnt requested to boot recovery.\n");
+            res = ENC_RES_BOOT_RECOVERY;
+            goto exit;
+        }
     }
 
-    if(strcmp(output, ENCMNT_BOOT_RECOVERY_OUTPUT) == 0)
-    {
-        INFO("trampoline_encmnt requested to boot recovery.\n");
-        res = ENC_RES_BOOT_RECOVERY;
-        goto exit;
+    if (!isFbe) {
+
+        if(!strstartswith(output, "/dev"))
+        {
+            ERROR("Invalid trampoline_encmnt output: %s\n", output);
+            goto exit;
+        }
+
+        g_decrypted = 1;
+
+        struct fstab_part *datap = fstab_find_first_by_path(fstab, "/data");
+        if(!datap)
+        {
+            ERROR("Failed to find /data in fstab!\n");
+            goto exit;
+        }
+
+        INFO("Updating device %s to %s in fstab due to encryption.\n", datap->device, output);
+        fstab_update_device(fstab, datap->device, output);
     }
-
-    if(!strstartswith(output, "/dev"))
-    {
-        ERROR("Invalid trampoline_encmnt output: %s\n", output);
-        goto exit;
-    }
-
-    g_decrypted = 1;
-
-    struct fstab_part *datap = fstab_find_first_by_path(fstab, "/data");
-    if(!datap)
-    {
-        ERROR("Failed to find /data in fstab!\n");
-        goto exit;
-    }
-
-    INFO("Updating device %s to %s in fstab due to encryption.\n", datap->device, output);
-    fstab_update_device(fstab, datap->device, output);
 
     res = ENC_RES_OK;
 exit:
+    if (isFbe) {
+        //rename("/data", "/realdata");
+        mount("/data", "/realdata", NULL, MS_MOVE, NULL);
+        mkdir("/data", 0755);
+    }
     free(output);
     return res;
 }

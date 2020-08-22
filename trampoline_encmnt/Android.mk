@@ -5,8 +5,8 @@ LOCAL_MODULE:= trampoline_encmnt
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(TARGET_ROOT_OUT)
 LOCAL_UNSTRIPPED_PATH := $(TARGET_ROOT_OUT_UNSTRIPPED)
-LOCAL_SHARED_LIBRARIES := libcryptfslollipop libcutils
-LOCAL_STATIC_LIBRARIES := libmultirom_static
+LOCAL_SHARED_LIBRARIES := libcryptfslollipop libcutils libe4crypt
+LOCAL_STATIC_LIBRARIES := libmultirom_static libext4_utils
 
 LOCAL_ADDITIONAL_DEPENDENCIES += libstdc++
 
@@ -29,8 +29,9 @@ else
     $(error Failed to find path to TWRP, which is required to build MultiROM with encryption support)
 endif
 
-LOCAL_C_INCLUDES += $(multirom_local_path) $(mr_twrp_path) $(mr_twrp_path)/crypto/scrypt/lib/crypto external/openssl/include external/boringssl/include
+LOCAL_C_INCLUDES += $(multirom_local_path) $(mr_twrp_path) $(mr_twrp_path)/crypto/scrypt/lib/crypto $(mr_twrp_path)/crypto/ext4crypt external/openssl/include external/boringssl/include
 LOCAL_C_INCLUDES += system/extras/libbootimg/include
+LOCAL_C_INCLUDES += system/extras/ext4_utils/include/ext4_utils
 
 LOCAL_SRC_FILES := \
     encmnt.cpp \
@@ -49,8 +50,9 @@ ifeq ($(MR_ENCRYPTION_FAKE_PROPERTIES),true)
     LOCAL_MODULE := libmultirom_fake_properties
     LOCAL_MODULE_TAGS := optional
     LOCAL_C_INCLUDES += $(multirom_local_path)
+	LOCAL_C_INCLUDES += system/extras/libbootimg/include
 
-    LOCAL_SRC_FILES := fake_properties.c
+    LOCAL_SRC_FILES := fake_properties.c klog.c
     LOCAL_SHARED_LIBRARIES := liblog
 
     ifneq ($(MR_ENCRYPTION_FAKE_PROPERTIES_EXTRAS),)

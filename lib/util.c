@@ -429,11 +429,13 @@ void clone_dir(DIR* d, char* dirpath, char* target, bool preserve_context, char*
             copy_dir_contents(dir, in, out, exclude_dir);
             continue;
         } else if (dp->d_type == DT_LNK) {
+            ERROR("copying link %s to %s\n", in, out);
             char target[256];
             readlink(in, target, sizeof(target));
             symlink(target, out);
             setattr(out, &a);
         } else if (dp->d_type == DT_REG) {
+            ERROR("copying file %s to %s\n", in, out);
             if (preserve_context) {
                 char* context = calloc(1, 50);
                 getfilecon(in, &context);
