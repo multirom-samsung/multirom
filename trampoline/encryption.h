@@ -24,11 +24,11 @@
 #define ENC_RES_BOOT_RECOVERY 2
 
 #ifdef MR_ENCRYPTION
-int encryption_before_mount(__unused struct fstab *fstab);
+int encryption_before_mount(__unused struct fstab *fstab, __unused bool isFbe);
 void encryption_destroy(void);
 int encryption_cleanup(void);
 #else
-int encryption_before_mount(__unused struct fstab *fstab) { return ENC_RES_OK; }
+int encryption_before_mount(__unused struct fstab *fstab, __unused bool isFbe) { return ENC_RES_OK; }
 void encryption_destroy(void) { }
 int encryption_cleanup(void) { return 0; }
 #endif

@@ -219,8 +219,15 @@ static int try_mount_all_entries(struct fstab *fstab, struct fstab_part *first_d
         // su binaries on /data
         p_itr->mountflags &= ~(MS_NOSUID);
 
-        if(mount(p_itr->device, REALDATA, p_itr->type, p_itr->mountflags, p_itr->options) >= 0)
-            return 0;
+        if(mount(p_itr->device, REALDATA, p_itr->type, p_itr->mountflags, p_itr->options) >= 0) {
+            struct stat info;
+            if(stat("/realdata/unencrypted/key/version", &info) < 0) {
+                return 0;
+            } else {
+                INFO("File system is FBE encrypted");
+                return -2;
+            }
+        }
     }
     while((p_itr = fstab_find_next_by_path(fstab, "/data", p_itr)));
 
@@ -239,6 +246,13 @@ static int try_mount_all_entries(struct fstab *fstab, struct fstab_part *first_d
         if(mount(first_data_p->device, REALDATA, fs_types[i], first_data_p->mountflags, fs_opts[i]) >= 0)
         {
             INFO("/realdata successfuly mounted with fs %s\n", fs_types[i]);
+            struct stat info;
+            if(stat("/realdata/unencrypted/key/version", &info) < 0) {
+                return 0;
+            } else {
+                INFO("File system is FBE encrypted\n");
+                return -2;
+            }
             return 0;
         }
     }
@@ -268,14 +282,15 @@ static int mount_and_run(struct fstab *fstab)
     mkdir(REALDATA, 0755);
     mkdir("/data", 0755);
 
-    if(try_mount_all_entries(fstab, datap) < 0)
+    int ret = try_mount_all_entries(fstab, datap);
+    if(ret < 0)
     {
 #ifndef MR_ENCRYPTION
         ERROR("Failed to mount /data with all possible filesystems!\n");
         return -1;
 #else
-        INFO("Failed to mount /data, trying encryption...\n");
-        switch(encryption_before_mount(fstab))
+        INFO("Failed to mount /realdata, trying encryption...\n");
+        switch(encryption_before_mount(fstab, ret == -2))
         {
             case ENC_RES_ERR:
                 ERROR("/data decryption failed!\n");
@@ -292,7 +307,7 @@ static int mount_and_run(struct fstab *fstab)
             default:
             case ENC_RES_OK:
             {
-                if(try_mount_all_entries(fstab, datap) < 0)
+                if(ret != -2 && try_mount_all_entries(fstab, datap) < 0)
                 {
                     ERROR("Failed to mount decrypted /data with all possible filesystems!\n");
                     return -1;
@@ -600,6 +615,7 @@ int main(int argc, char *argv[])
     mkdir("/dev/socket", 0755);
     mkdir("/proc", 0755);
     mkdir("/sys", 0755);
+    mkdir("/tmp", 0755);
 
     mount("tmpfs", "/dev", "tmpfs", MS_NOSUID, "mode=0755");
     mount("devpts", "/dev/pts", "devpts", 0, NULL);
@@ -657,6 +673,8 @@ run_main_init:
     if (access("/fakefstab/", F_OK)) {
         DIR* dir = opendir("/proc/device-tree/firmware/android");
         copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab", NULL);
+        //remove("/fakefstab/fstab/system/mnt_point");
+        rmdir("/fakefstab/fstab/vendor");
     }
 #endif
     umount("/proc");

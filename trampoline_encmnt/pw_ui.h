@@ -18,6 +18,6 @@
 #ifndef PW_UI_H
 #define PW_UI_H
 
-int pw_ui_run(int pwtype);
+int pw_ui_run(int pwtype, bool isFbe);
 
 #endif

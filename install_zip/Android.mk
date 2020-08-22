@@ -17,9 +17,9 @@ ifeq ($(MR_ENCRYPTION),true)
 	multirom_extra_dep += trampoline_encmnt linker
 
 	multirom_cp_enc_libs := \
-		libcryptfslollipop.so libcrypto.so libc.so libcutils.so \
+		libcryptfslollipop.so libcrypto.so libext4_utils.so libsparse.so libext2_uuid.so libe4crypt.so libc.so libcutils.so \
 		libdl.so libhardware.so liblog.so libm.so libstdc++.so \
-		libc++.so
+		libc++.so libwifikeystorehal.so libsoftkeymasterdevice.so android.system.wifi.keystore@1.0.so android.hardware.weaver@1.0.so
 
 	ifeq ($(TARGET_HW_DISK_ENCRYPTION),true)
 		multirom_cp_enc_libs += \

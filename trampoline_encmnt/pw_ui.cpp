@@ -38,6 +38,7 @@ extern "C" {
 }
 
 #include "crypto/lollipop/cryptfs.h"
+#include "crypto/ext4crypt/Decrypt.h"
 
 #define HEADER_HEIGHT (110*DPI_MUL)
 #define PWUI_DOT_R (15*DPI_MUL)
@@ -53,6 +54,7 @@ struct pwui_type_pass_data {
     char *pass_buf;
     char *pass_buf_stars;
     size_t pass_buf_cap;
+    bool isFbe;
 };
 
 struct pwui_type_pattern_data {
@@ -63,6 +65,7 @@ struct pwui_type_pattern_data {
     int connected_dots[PWUI_DOTS_CNT];
     size_t connected_dots_len;
     int touch_id;
+    bool isFbe;
 };
 
 static pthread_mutex_t exit_code_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -120,7 +123,7 @@ static void reveal_rect_alpha_step(void *data, float interpolated)
     fb_request_draw();
 }
 
-static int try_password(char *pass)
+static int try_password(char *pass, bool isFbe)
 {
     fb_text_set_content(invalid_pass_text, "");
 
@@ -129,7 +132,12 @@ static int try_password(char *pass)
     ncard_set_text(b, "Verifying password...");
     ncard_show(b, 1);
 
-    if(cryptfs_check_passwd(pass) != 0)
+    if (isFbe && Decrypt_User(0, pass) == false) {
+        ncard_hide();
+        fb_text_set_content(invalid_pass_text, "Invalid password!");
+        center_text(invalid_pass_text, 0, -1, fb_width, -1);
+        return -1;
+    } else if(!isFbe && cryptfs_check_passwd(pass) != 0)
     {
         ncard_hide();
         fb_text_set_content(invalid_pass_text, "Invalid password!");
@@ -206,16 +214,17 @@ static void type_pass_key_pressed(void *data, uint8_t code)
             fb_request_draw();
             break;
         case OSK_ENTER:
-            try_password(d->pass_buf);
+            try_password(d->pass_buf, d->isFbe);
             break;
     }
 }
 
-static void type_pass_init(int pwtype)
+static void type_pass_init(int pwtype, bool isFbe)
 {
     struct pwui_type_pass_data *d = (pwui_type_pass_data*)mzalloc(sizeof(struct pwui_type_pass_data));
     d->keyboard = keyboard_create(pwtype == CRYPT_TYPE_PIN ? KEYBOARD_PIN : KEYBOARD_NORMAL,
             0, fb_height*0.65, fb_width, fb_height*0.35);
+    d->isFbe = isFbe;
     keyboard_set_callback(d->keyboard, type_pass_key_pressed, d);
 
     d->passwd_text = fb_add_text(0, 0, C_TEXT, SIZE_BIG, "");
@@ -351,7 +360,7 @@ static int type_pattern_touch_handler(touch_event *ev, void *data)
             passwd[i] = '1' + d->connected_dots[i];
         passwd[i] = 0;
 
-        if(try_password(passwd) < 0)
+        if(try_password(passwd, d->isFbe) < 0)
         {
             list_clear(&d->active_dots, (callback)fb_remove_item);
             list_clear(&d->complete_lines, (callback)fb_remove_item);
@@ -364,7 +373,7 @@ static int type_pattern_touch_handler(touch_event *ev, void *data)
     return 0;
 }
 
-static void type_pattern_init(void)
+static void type_pattern_init(bool isFbe)
 {
     struct pwui_type_pattern_data *d = (pwui_type_pattern_data*)mzalloc(sizeof(struct pwui_type_pattern_data));
     int cx, cy;
@@ -388,6 +397,7 @@ static void type_pattern_init(void)
     }
 
     d->touch_id = -1;
+    d->isFbe = isFbe;
     add_touch_handler(type_pattern_touch_handler, d);
 
     pwui_type_data = d;
@@ -405,7 +415,7 @@ static void type_pattern_destroy(void)
     pwui_type_data = NULL;
 }
 
-static void init_ui(int pwtype)
+static void init_ui(int pwtype, bool isFbe)
 {
     fb_add_rect_lvl(100, 0, 0, fb_width, HEADER_HEIGHT, C_HIGHLIGHT_BG);
 
@@ -450,10 +460,10 @@ static void init_ui(int pwtype)
     {
         case CRYPT_TYPE_PASSWORD:
         case CRYPT_TYPE_PIN:
-            type_pass_init(pwtype);
+            type_pass_init(pwtype, isFbe);
             break;
         case CRYPT_TYPE_PATTERN:
-            type_pattern_init();
+            type_pattern_init(isFbe);
             break;
         default:
             t = fb_add_text(0, 0, C_TEXT, SIZE_NORMAL, "Error: unknown password type %d", pwtype);
@@ -491,7 +501,7 @@ static int pw_ui_shutdown_counter_touch_handler(UNUSED touch_event *ev, void *da
     return -1;
 }
 
-int pw_ui_run(int pwtype)
+int pw_ui_run(int pwtype, bool isFbe)
 {
     int shutdown_counter = 0;
 
@@ -507,7 +517,7 @@ int pw_ui_run(int pwtype)
     workers_start();
     anim_init(1.f);
 
-    init_ui(pwtype);
+    init_ui(pwtype, isFbe);
 
     start_input_thread();
     add_touch_handler(pw_ui_shutdown_counter_touch_handler, &shutdown_counter);

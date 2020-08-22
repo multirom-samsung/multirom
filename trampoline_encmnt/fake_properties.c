@@ -22,8 +22,13 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils/Log.h>
+#include "log.h"
+#include <sys/wait.h>
+#include <sys/types.h>
 
 #define PROPERTY_SOCKET "/property_socket"
+char* os_version = NULL;
+char* os_level = NULL;
 /* MultiROM doesn't initialize the property service,
  * but decryption on Nexus 6P waits for one property to become true
  * so we hardcode it here
@@ -74,11 +79,77 @@ int property_get(const char *key, char *value, const char *default_value)
     return strlen(value);
 }
 
+void stdio_to_null(void)
+{
+    int fd = open("/dev/null", O_RDWR|O_CLOEXEC);
+    if(fd >= 0)
+    {
+        dup2(fd, 0);
+        dup2(fd, 1);
+        dup2(fd, 2);
+        close(fd);
+    }
+}
+
+static int fork_and_exec(char *cmd, char** env, char** argv)
+{
+    pid_t pID = fork();
+    if(pID == 0)
+    {
+        stdio_to_null();
+        setpgid(0, getpid());
+        if (strstr(cmd, "keystore_auth")) {
+            setuid(1000);
+        } else if (strstr(cmd, "keymaster") || strstr(cmd, "qsee")) {
+        }
+        setenv("LD_LIBRARY_PATH", "/mrom_enc", 1);
+        setenv("LD_PRELOAD", "/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", 1);
+        execve(cmd, argv, environ);
+        INFO("Failed to exec %s: %s\n", cmd[0], strerror(errno));
+        _exit(127);
+    }
+    return pID;
+}
+
+int keystore_pid = -1;
+int keystore_auth_pid;
+
 int property_set(char* property, char* value) {
 
     char* property_value;
     int i, s, len;
     struct sockaddr_un saun;
+
+    char* env[] = {"LD_CONFIG_FILE=/mron_enc/ld.config.txt", "LD_LIBRARY_PATH=/mrom_enc", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", NULL};
+    if (property && value && strstr(property, "ctl.start") && !strcmp(value, "keystore")) {
+        char* args[] = {"keystore", "/tmp/misc/keystore", NULL};
+        keystore_pid = fork_and_exec("/mrom_enc/keystore", env, args);
+        if (keystore_pid == -1)
+            INFO("Failed to fork for keymaster; should never happen!\n");
+        else
+            INFO("keystore started: pid=%d\n", keystore_pid);
+        return 0;
+    }
+
+    if (property && value && strstr(property, "ctl.start") && !strcmp(value, "keystore_auth")) {
+        char* args[] = {"keystore_auth", NULL};
+        keystore_auth_pid = fork_and_exec("/mrom_enc/keystore_auth", env, args);
+        if (keystore_auth_pid == -1)
+            INFO("Failed to fork for keymaster; should never happen!\n");
+        else
+            INFO("keystore started: pid=%d\n", keystore_auth_pid);
+        return 0;
+    }
+
+    if (property && value && strstr(property, "ctl.stop") && !strcmp(value, "keystore")) {
+    if (keystore_pid != -1)
+    {
+        kill(-keystore_pid, SIGTERM); // kill the entire process group
+        waitpid(keystore_pid, NULL, 0);
+        ERROR("keystore killed %d\n", keystore_pid);
+    }
+    return 0;
+    }
 
     ALOGE("property_set called for %s:%s\n", property, value);
     property_value = calloc(strlen(property) + strlen(value) + 1, 1);
