@@ -82,7 +82,7 @@ $(MULTIROM_ZIP_TARGET): multirom trampoline signapk bbootimg mrom_kexec_static m
 				cp -a $(TARGET_OUT_SHARED_LIBRARIES)/$$f $(MULTIROM_INST_DIR)/multirom/enc/; \
 			fi; \
 		done; \
-		if [ -n "$(MR_ENCRYPTION_SETUP_SCRIPT)" ]; then sh "$(ANDROID_BUILD_TOP)/$(MR_ENCRYPTION_SETUP_SCRIPT)" "$(ANDROID_BUILD_TOP)" "$(MULTIROM_INST_DIR)/multirom/enc"; fi; \
+		if [ -n "$(MR_ENCRYPTION_SETUP_SCRIPT)" ]; then sh "./$(MR_ENCRYPTION_SETUP_SCRIPT)" "$(MULTIROM_INST_DIR)/multirom/enc"; fi; \
 		\
 		if [ "$(TARGET_IS_64_BIT)" == "true" ]; then \
 			cp -a $(TARGET_OUT_EXECUTABLES)/linker64 $(MULTIROM_INST_DIR)/multirom/enc/; \

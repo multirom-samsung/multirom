@@ -153,11 +153,11 @@ LOCAL_SRC_FILES := \
     src/psnames/psnames.c \
     src/pshinter/pshinter.c
 
-ifeq ($(shell if [ -e "$(ANDROID_BUILD_TOP)/external/freetype/src/gzip/ftgzip.c" ]; then echo "hasgzip"; fi),hasgzip)
+ifeq ($(shell if [ -e "external/freetype/src/gzip/ftgzip.c" ]; then echo "hasgzip"; fi),hasgzip)
 LOCAL_SRC_FILES += src/gzip/ftgzip.c
 endif
 
-ifeq ($(shell if [ -e "$(ANDROID_BUILD_TOP)/external/freetype/src/base/ftxf86.c" ]; then echo "found"; fi),found)
+ifeq ($(shell if [ -e "external/freetype/src/base/ftxf86.c" ]; then echo "found"; fi),found)
     LOCAL_SRC_FILES += src/base/ftxf86.c
 else
     LOCAL_SRC_FILES += \
