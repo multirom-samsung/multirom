@@ -137,6 +137,7 @@ static int copy_rd_files(UNUSED const char *path, UNUSED const char *busybox_pat
 #define RD_GZIP 1
 #define RD_LZ4  2
 #define RD_LZMA 3
+#define RD_CPIO 4
 static int inject_second_rd(const char *path, const char *second_path)
 {
     int result = -1;
@@ -236,6 +237,11 @@ static int inject_rd(const char *path, const char *second_path)
         type = RD_LZMA;
         snprintf(buff, sizeof(buff), "B=\"%s\"; cd \"%s\"; \"$B\" lzma -d -c \"%s\" | \"$B\" cpio -i", busybox_path, TMP_RD_UNPACKED_DIR, path);
     }
+    else if(magic == 0x37303730)
+    {
+        type = RD_CPIO;
+        snprintf(buff, sizeof(buff), "B=\"%s\"; cd \"%s\"; \"$B\" cat \"%s\" | \"$B\" cpio -i", busybox_path, TMP_RD_UNPACKED_DIR, path);
+    }
     else
     {
         ERROR("Unknown ramdisk magic 0x%08X, can't update trampoline\n", magic);
@@ -273,6 +279,8 @@ static int inject_rd(const char *path, const char *second_path)
         case RD_LZMA:
             snprintf(buff, sizeof(buff), "B=\"%s\"; cd \"%s\"; \"$B\" find . | \"$B\" cpio -o -H newc | \"%s/xz\" -Flzma > \"%s\"", busybox_path, TMP_RD_UNPACKED_DIR, mrom_dir(), path);
             break;
+        case RD_CPIO:
+            snprintf(buff, sizeof(buff), "B=\"%s\"; cd \"%s\"; \"$B\" find . | \"$B\" cpio -o -H newc > \"%s\"", busybox_path, TMP_RD_UNPACKED_DIR, path);
     }
 
     r = run_cmd(cmd);
