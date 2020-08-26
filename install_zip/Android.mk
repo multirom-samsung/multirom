@@ -48,7 +48,11 @@ ifneq ($(MR_DEVICE_VARIANTS),)
 	MR_DEVICES += $(MR_DEVICE_VARIANTS)
 endif
 
-$(MULTIROM_ZIP_TARGET): multirom trampoline signapk bbootimg mrom_kexec_static mrom_adbd $(multirom_extra_dep)
+ifeq ($(MR_NO_KEXEC),)
+	multirom_extra_dep += mrom_kexec_static
+endif
+
+$(MULTIROM_ZIP_TARGET): multirom trampoline signapk bbootimg mrom_adbd $(multirom_extra_dep)
 	@echo
 	@echo
 	@echo "A crowdfunding campaign for MultiROM took place in 2013. These people got perk 'The Tenth':"
@@ -65,7 +69,9 @@ $(MULTIROM_ZIP_TARGET): multirom trampoline signapk bbootimg mrom_kexec_static m
 	@cp -a $(install_zip_path)/prebuilt-installer/* $(MULTIROM_INST_DIR)/
 	@cp -a $(TARGET_ROOT_OUT)/multirom $(MULTIROM_INST_DIR)/multirom/
 	@cp -a $(TARGET_ROOT_OUT)/trampoline $(MULTIROM_INST_DIR)/multirom/
-	@cp -a $(TARGET_OUT_OPTIONAL_EXECUTABLES)/mrom_kexec_static $(MULTIROM_INST_DIR)/multirom/kexec
+	@if [ -f "$(TARGET_OUT_OPTIONAL_EXECUTABLES)/mrom_kexec_static" ]; then \
+		cp -a $(TARGET_OUT_OPTIONAL_EXECUTABLES)/mrom_kexec_static $(MULTIROM_INST_DIR)/multirom/kexec; \
+	fi
 	@cp -a $(TARGET_OUT_OPTIONAL_EXECUTABLES)/mrom_adbd $(MULTIROM_INST_DIR)/multirom/adbd
 
 	@if $(MR_ENCRYPTION); then \

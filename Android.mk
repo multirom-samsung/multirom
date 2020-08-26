@@ -84,8 +84,10 @@ include $(multirom_local_path)/kernel_inject/Android.mk
 # ZIP installer
 include $(multirom_local_path)/install_zip/Android.mk
 
+ifeq ($(MR_NO_KEXEC),)
 # Kexec-tools
 include $(multirom_local_path)/kexec-tools/Android.mk
+endif
 
 # adbd
 include $(multirom_local_path)/adbd/Android.mk
