@@ -8,6 +8,7 @@ RD_ADDR="$(cat /tmp/rd_addr)"
 CMPR_GZIP=0
 CMPR_LZ4=1
 CMPR_LZMA=2
+CMPR_CPIO=3
 
 if [ ! -e "$BOOT_DEV" ]; then
     echo "BOOT_DEV \"$BOOT_DEV\" does not exist!"
@@ -39,6 +40,10 @@ case "$magic" in
     5D0000*)        # LZMA
         $BUSYBOX lzma -d -c "../initrd.img" | $BUSYBOX cpio -i
         rd_cmpr=CMPR_LZMA;
+        ;;
+    30373037)        # CPIO
+        $BUSYBOX cat "../initrd.img" | $BUSYBOX cpio -i
+        rd_cmpr=CMPR_CPIO;
         ;;
     *)
         echo "invalid ramdisk magic $magic"
@@ -90,6 +95,9 @@ case $rd_cmpr in
         ;;
     CMPR_LZMA)
         find . | $BUSYBOX cpio -o -H newc | $XZ -Flzma > "../initrd.img"
+        ;;
+    CMPR_CPIO)
+        find . | $BUSYBOX cpio -o -H newc > "../initrd.img"
         ;;
 esac
 
