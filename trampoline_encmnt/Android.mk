@@ -5,7 +5,7 @@ LOCAL_MODULE:= trampoline_encmnt
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(TARGET_ROOT_OUT)
 LOCAL_UNSTRIPPED_PATH := $(TARGET_ROOT_OUT_UNSTRIPPED)
-LOCAL_SHARED_LIBRARIES := libcryptfslollipop libcutils libe4crypt
+LOCAL_SHARED_LIBRARIES := libcryptfslollipop libcutils libe4crypt libwifikeystorehal libsoftkeymasterdevice android.system.wifi.keystore@1.0
 LOCAL_STATIC_LIBRARIES := libmultirom_static libext4_utils
 
 LOCAL_ADDITIONAL_DEPENDENCIES += libstdc++
@@ -52,7 +52,7 @@ ifeq ($(MR_ENCRYPTION_FAKE_PROPERTIES),true)
     LOCAL_C_INCLUDES += $(multirom_local_path)
 	LOCAL_C_INCLUDES += system/extras/libbootimg/include
 
-    LOCAL_SRC_FILES := fake_properties.c klog.c
+    LOCAL_SRC_FILES := fake_properties.c
     LOCAL_SHARED_LIBRARIES := liblog
 
     ifneq ($(MR_ENCRYPTION_FAKE_PROPERTIES_EXTRAS),)

@@ -37,7 +37,7 @@ extern int e4crypt_install_keyring();
 static char encmnt_cmd_arg[64] = { 0 };
 static char *const encmnt_cmd[] = { "/mrom_enc/trampoline_encmnt", encmnt_cmd_arg, NULL };
 #ifdef MR_ENCRYPTION_FAKE_PROPERTIES
-static char *const encmnt_envp[] = { "LD_CONFIG_FILE='/mrom_enc/ld.config.txt'", "LD_LIBRARY_PATH=/mrom_enc/", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", NULL };
+static char *const encmnt_envp[] = { "LD_CONFIG_FILE='/mrom_enc/ld.config.txt'", "LD_LIBRARY_PATH=/mrom_enc/", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so /mrom_enc/libmultirom_fake_logger.so", NULL };
 #else
 static char *const encmnt_envp[] = { "LD_CONFIG_FILE='/mrom_enc/ld.config.txt'", "LD_LIBRARY_PATH=/mrom_enc/", NULL };
 #endif
@@ -98,7 +98,7 @@ int encryption_before_mount(__unused struct fstab *fstab, __unused bool isFbe)
         goto exit;
     }
 
-    if (!isFbe || exit_code != 0) {
+    if (output != NULL) {
         itr = output + strlen(output) - 1;
         while(itr >= output && isspace(*itr))
             *itr-- = 0;
@@ -146,7 +146,7 @@ exit:
         mount("/data", "/realdata", NULL, MS_MOVE, NULL);
         mkdir("/data", 0755);
     }
-    free(output);
+    //free(output);
     return res;
 }
 

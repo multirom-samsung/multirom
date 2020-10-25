@@ -83,7 +83,7 @@ static void boot_internal_clicked(UNUSED void *data)
 
     // We need to run quirks for primary ROM to prevent
     // restorecon breaking everything
-    rom_quirks_on_initrd_finalized();
+    //rom_quirks_on_initrd_finalized();
 
     pthread_mutex_lock(&exit_code_mutex);
     exit_code = ENCMNT_UIRES_BOOT_INTERNAL;
