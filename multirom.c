@@ -1556,6 +1556,7 @@ int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to
                     umount("/system_root");
                     //disable_dtb_fstab("system");
                 }
+                nokexec_set_skip_mr_flag();
                 //if (mount_dtb_fstab("vendor") == 0) {
                     //disable_dtb_fstab("vendor");
                // }
