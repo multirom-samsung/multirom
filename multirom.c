@@ -137,6 +137,28 @@ void remove_dtb_fstab() {
     }
 }
 
+int multirom_is_android10() {
+    if (!multirom_path_exists("/", "apex")) {
+        return 1;
+    }
+    char* initPath = "/main_init";
+    if (!multirom_path_exists("/", "/.backup/init")) {
+        initPath = "/.backup/init";
+    }
+
+    char *addr;
+    int initfd = open(initPath, O_RDWR);
+    struct stat st;
+    lstat(initPath, &st);
+    size_t size = st.st_size;
+    addr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, initfd, 0);
+    int contains = strstr(addr, "selinux_setup") != NULL;
+    munmap(addr, size);
+    close(initfd);
+    return contains;
+}
+
+
 int mount_dtb_fstab(char* partition) {
     int rc = -1;
 
@@ -150,7 +172,7 @@ int mount_dtb_fstab(char* partition) {
     sprintf(type, "%s%s", root_path, "/type");
     sprintf(mnt_flags, "%s%s", root_path, "/mnt_flags");
 
-    if (!strcmp(partition, "system") && !multirom_path_exists("/", "apex")) {
+    if (!strcmp(partition, "system") && multirom_is_android10()) {
         partition = "system_root";
         mkdir_with_perms("/system_root", 0755, NULL, NULL);
         if (access("/system/bin/init", F_OK)) {
@@ -370,7 +392,7 @@ int multirom_get_current_oslevel(struct multirom_status *s)
     return 0;
 }
 
-int multirom(const char *rom_to_boot)
+int multirom(const char *rom_to_boot, int always_reboot)
 {
     if(multirom_find_base_dir() == -1)
     {
@@ -490,7 +512,11 @@ int multirom(const char *rom_to_boot)
 
         switch(multirom_ui(&s, &to_boot))
         {
-            case UI_EXIT_BOOT_ROM: break;
+            case UI_EXIT_BOOT_ROM:
+                if (always_reboot) {
+                    exit = (EXIT_REBOOT | EXIT_UMOUNT);
+                }
+                break;
             case UI_EXIT_REBOOT:
                 exit = (EXIT_REBOOT | EXIT_UMOUNT);
                 break;
@@ -559,7 +585,7 @@ int multirom(const char *rom_to_boot)
         if(rom_to_boot == NULL)
             multirom_run_scripts("run-on-boot", to_boot);
 
-        exit = multirom_prepare_for_boot(&s, to_boot);
+        exit = multirom_prepare_for_boot(&s, to_boot, always_reboot);
         INFO("prepare for boot returned %d\n", exit);
 
         // Something went wrong, exit/reboot
@@ -1503,9 +1529,9 @@ struct multirom_rom *multirom_get_rom_by_id(struct multirom_status *s, int id)
     return NULL;
 }
 
-int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to_boot)
+int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to_boot, int always_reboot)
 {
-    int exit = EXIT_UMOUNT;
+    int exit = always_reboot ? (EXIT_REBOOT | EXIT_UMOUNT) : EXIT_UMOUNT;
     int type = to_boot->type;
 
 
@@ -1947,7 +1973,7 @@ int multirom_prep_android_mounts(__unused struct multirom_status *s, struct mult
     bool modern_sar = false;
     asprintf(&system_path, "%s/system.sparse.img", rom->base_path);
 
-   if (!multirom_path_exists("/system", "init.rc") && multirom_path_exists("/", "apex")) {
+   if (!multirom_path_exists("/system", "init.rc") && !multirom_is_android10()) {
        umount("/system");
        mkdir_with_perms("/system_root", 0755, NULL, NULL);
        multirom_mount_image(system_path, "/system_root", "ext4", MS_RDONLY, NULL);
@@ -1963,7 +1989,7 @@ int multirom_prep_android_mounts(__unused struct multirom_status *s, struct mult
        DIR* dir = opendir("/system_root");
        char* exclude_dirs[] = {"system", "vendor", "product", NULL};
        copy_init_contents(dir, "/system_root", "/", true, exclude_dirs);
-   } else if (!multirom_path_exists("/", "apex")) {
+   } else if (multirom_is_android10()) {
        umount("/system");
        mkdir_with_perms("/system_root", 0755, NULL, NULL);
        multirom_mount_image(system_path, "/system_root", "ext4", MS_RDONLY, NULL);

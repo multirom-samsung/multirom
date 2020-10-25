@@ -131,7 +131,7 @@ struct multirom_status
     struct rcadditions rc;
 };
 
-int multirom(const char *rom_to_boot);
+int multirom(const char *rom_to_boot, int always_reboot);
 int multirom_find_base_dir(void);
 void multirom_emergency_reboot(void);
 int multirom_default_status(struct multirom_status *s);
@@ -145,7 +145,7 @@ void multirom_import_internal(void);
 void multirom_dump_status(struct multirom_status *s);
 int multirom_save_status(struct multirom_status *s);
 void multirom_fixup_rom_name(struct multirom_rom *rom, char *name, const char *def);
-int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to_boot);
+int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to_boot, int always_reboot);
 void multirom_free_status(struct multirom_status *s);
 void multirom_free_rom(void *rom);
 int multirom_init_fb(int rotation);
