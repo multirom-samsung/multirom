@@ -72,7 +72,7 @@ static int copy_rd_files(UNUSED const char *path, const char *target)
     }
     snprintf(path_main, sizeof(path_main), "%s%s", target, "/main_init");
     snprintf(path_mrom_enc, sizeof(path_mrom_enc), "%s%s", target, "/mrom_enc");
-    snprintf(path_mrom_fstab, sizeof(path_mrom_fstab), "%s%s", target, "/mrom.fstab");
+    snprintf(path_mrom_fstab, sizeof(path_mrom_fstab), "%s%s", target, "/mrom_fsbat");
     snprintf(path_hwservice_contexts, sizeof(path_hwservice_contexts), "%s%s", target, "/plat_hwservice_contexts");
     snprintf(path_nonplat_hwservice_contexts, sizeof(path_nonplat_hwservice_contexts), "%s%s", target, "/nonplat_hwservice_contexts");
     snprintf(path_ueventd, sizeof(path_ueventd), "%s%s", target, "/sbin/ueventd");
@@ -98,7 +98,7 @@ static int copy_rd_files(UNUSED const char *path, const char *target)
     symlink("../main_init", path_watchdog);
 
 #ifdef MR_USE_MROM_FSTAB
-    snprintf(buf, sizeof(buf), "%s/mrom.fstab", mrom_dir());
+    snprintf(buf, sizeof(buf), "%s/mrom_fsbat", mrom_dir());
     copy_file(buf, path_mrom_fstab);
 #else
     remove(path_mrom_fstab);

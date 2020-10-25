@@ -109,7 +109,7 @@ $(MULTIROM_ZIP_TARGET): multirom trampoline bbootimg mrom_adbd $(multirom_extra_
 	@if [ -n "$(MR_INFOS)" ]; then cp -vr $(PWD)/$(MR_INFOS)/* $(MULTIROM_INST_DIR)/multirom/infos/; fi
 	@echo Copying scripts
 	@cp -a $(TARGET_OUT_OPTIONAL_EXECUTABLES)/bbootimg $(MULTIROM_INST_DIR)/scripts/
-	@cp $(PWD)/$(MR_FSTAB) $(MULTIROM_INST_DIR)/multirom/mrom.fstab
+	@cp $(PWD)/$(MR_FSTAB) $(MULTIROM_INST_DIR)/multirom/mrom_fsbat
 	@echo Preparing installer script
 	@$(install_zip_path)/extract_boot_dev.sh $(PWD)/$(MR_FSTAB) $(MULTIROM_INST_DIR)/scripts/bootdev
 	@$(install_zip_path)/make_updater_script.sh "$(MR_DEVICES)" $(MULTIROM_INST_DIR)/META-INF/com/google/android "Installing MultiROM for"
