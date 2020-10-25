@@ -32,6 +32,8 @@ ifeq ($(MR_ENCRYPTION),true)
 		multirom_cp_enc_libs += libmultirom_fake_properties.so
 		multirom_extra_dep += libmultirom_fake_propertywait
 		multirom_cp_enc_libs += libmultirom_fake_propertywait.so
+		multirom_extra_dep += libmultirom_fake_logger
+		multirom_cp_enc_libs += libmultirom_fake_logger.so
 	endif
 else
 	MR_ENCRYPTION := false
