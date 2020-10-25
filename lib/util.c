@@ -561,10 +561,17 @@ int run_cmd_with_env(char **cmd, char *const *envp)
 
 
 char* read_file(char* file) {
-    char* buf = calloc(1, 256);
+    char* buf = calloc(1, 256000);
+    int nread = 0;
+    int offset = 0;
+    char buff[256];
     FILE* fp = fopen(file, "r");
     if (fp) {
-        fread(buf, 1, 256, fp);
+        while ((nread = fread(buff, 1, 256, fp)) > 0) {
+            INFO("buf %s\n", buff);
+            memcpy(buf + offset, buff, nread);
+            offset += nread;
+        }
         fclose(fp);
     } else {
         ERROR("cannot open %s %s\n", file, strerror(errno));

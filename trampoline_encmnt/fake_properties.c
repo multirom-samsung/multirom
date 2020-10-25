@@ -22,7 +22,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils/Log.h>
-#include "log.h"
+//#include "log.h"
 #include <sys/wait.h>
 #include <sys/types.h>
 
@@ -105,7 +105,6 @@ static int fork_and_exec(char *cmd, char** env, char** argv)
         setenv("LD_LIBRARY_PATH", "/mrom_enc", 1);
         setenv("LD_PRELOAD", "/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", 1);
         execve(cmd, argv, environ);
-        INFO("Failed to exec %s: %s\n", cmd[0], strerror(errno));
         _exit(127);
     }
     return pID;
@@ -120,25 +119,21 @@ int property_set(char* property, char* value) {
     int i, s, len;
     struct sockaddr_un saun;
 
-    char* env[] = {"LD_CONFIG_FILE=/mron_enc/ld.config.txt", "LD_LIBRARY_PATH=/mrom_enc", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so", NULL};
+    char* env[] = {"LD_CONFIG_FILE=/mron_enc/ld.config.txt", "LD_LIBRARY_PATH=/mrom_enc", "LD_PRELOAD=/mrom_enc/libmultirom_fake_properties.so /mrom_enc/libmultirom_fake_propertywait.so /mrom_enc/libmultirom_fake_logger.so", NULL};
     if (property && value && strstr(property, "ctl.start") && !strcmp(value, "keystore")) {
         char* args[] = {"keystore", "/tmp/misc/keystore", NULL};
         keystore_pid = fork_and_exec("/mrom_enc/keystore", env, args);
-        if (keystore_pid == -1)
-            INFO("Failed to fork for keymaster; should never happen!\n");
-        else
-            INFO("keystore started: pid=%d\n", keystore_pid);
+        if (keystore_pid != -1) {
+            ALOGE("keystore running %d", keystore_pid);
+        } else {
+            ALOGE("keystore failed %d", keystore_pid);
+        }
         return 0;
     }
 
     if (property && value && strstr(property, "ctl.start") && !strcmp(value, "keystore_auth")) {
         char* args[] = {"keystore_auth", NULL};
         keystore_auth_pid = fork_and_exec("/mrom_enc/keystore_auth", env, args);
-        if (keystore_auth_pid == -1)
-            INFO("Failed to fork for keymaster; should never happen!\n");
-        else
-            INFO("keystore started: pid=%d\n", keystore_auth_pid);
-        return 0;
     }
 
     if (property && value && strstr(property, "ctl.stop") && !strcmp(value, "keystore")) {
@@ -146,7 +141,6 @@ int property_set(char* property, char* value) {
     {
         kill(-keystore_pid, SIGTERM); // kill the entire process group
         waitpid(keystore_pid, NULL, 0);
-        ERROR("keystore killed %d\n", keystore_pid);
     }
     return 0;
     }
