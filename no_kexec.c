@@ -76,22 +76,22 @@ char *nokexec_find_boot_mmcblk_path(struct multirom_status *s)
         INFO(NO_KEXEC_LOG_TEXT ": found boot at '%s'\n", boot->device);
     else
     {
-        INFO(NO_KEXEC_LOG_TEXT ": not found in fstab, try looking at mrom.fstab...\n");
+        INFO(NO_KEXEC_LOG_TEXT ": not found in fstab, try looking at mrom_fstab...\n");
 
         struct fstab *mrom_fstab;
         char path_mrom_fstab[256];
 
-        sprintf(path_mrom_fstab, "%s/%s", mrom_dir(), "mrom.fstab");
+        sprintf(path_mrom_fstab, "%s/%s", mrom_dir(), "mrom_fsbat");
         mrom_fstab = fstab_load(path_mrom_fstab, 1);
         if (!mrom_fstab)
         {
-            ERROR(NO_KEXEC_LOG_TEXT ": couldn't load mrom.fstab '%s'\n", path_mrom_fstab);
+            ERROR(NO_KEXEC_LOG_TEXT ": couldn't load mrom_fstab '%s'\n", path_mrom_fstab);
             return NULL;
         }
 
         boot = fstab_find_first_by_path(mrom_fstab, "/boot");
         if (boot)
-            INFO(NO_KEXEC_LOG_TEXT ": found boot (using mrom.fstab) at '%s'\n", boot->device);
+            INFO(NO_KEXEC_LOG_TEXT ": found boot (using mrom_fstab) at '%s'\n", boot->device);
         else
             return NULL;
     }
@@ -175,6 +175,68 @@ int nokexec_set_secondary_flag(void)
 
     INFO(NO_KEXEC_LOG_TEXT ": Writing boot.img updated with secondary flag set\n");
     if (libbootimg_write_img(&img, nokexec_s.path_boot_mmcblk) < 0)
+    {
+        ERROR("Failed to libbootimg_write_img!\n");
+    }
+    else
+        res = 0;
+
+    libbootimg_destroy(&img);
+    return res;
+}
+
+int nokexec_set_skip_mr_flag(void)
+{
+    // echo -ne "\x71" | dd of=/dev/nk bs=1 seek=63 count=1 conv=notrunc
+    int res = -1;
+    struct bootimg img;
+
+    // make note that the primary slot now contains a secondary boot.img
+    // by tagging the BOOT_NAME at the very end, even after a null terminated "tr_verNN" string
+    INFO(NO_KEXEC_LOG_TEXT ": Going to tag the bootimg in primary slot as skip_mr\n");
+
+    if (libbootimg_init_load(&img, nokexec_s.path_boot_mmcblk, LIBBOOTIMG_LOAD_ALL) < 0)
+    {
+        ERROR(NO_KEXEC_LOG_TEXT ": Could not open boot image (%s)!\n", nokexec_s.path_boot_mmcblk);
+        return -1;
+    }
+
+    // Update the boot.img
+    img.hdr.name[BOOT_NAME_SIZE-1] = 0x72;
+
+    INFO(NO_KEXEC_LOG_TEXT ": Writing boot.img updated with secondary flag set\n");
+    if (libbootimg_write_img(&img, nokexec_s.path_boot_mmcblk) < 0)
+    {
+        ERROR("Failed to libbootimg_write_img!\n");
+    }
+    else
+        res = 0;
+
+    libbootimg_destroy(&img);
+    return res;
+}
+
+int nokexec_unset_skip_mr_flag(void)
+{
+    // echo -ne "\x71" | dd of=/dev/nk bs=1 seek=63 count=1 conv=notrunc
+    int res = -1;
+    struct bootimg img;
+
+    // make note that the primary slot now contains a secondary boot.img
+    // by tagging the BOOT_NAME at the very end, even after a null terminated "tr_verNN" string
+    INFO(NO_KEXEC_LOG_TEXT ": Going to tag the bootimg in primary slot as skip_mr\n");
+
+    if (libbootimg_init_load(&img, "/dev/block/bootdevice/by-name/boot", LIBBOOTIMG_LOAD_ALL) < 0)
+    {
+        ERROR(NO_KEXEC_LOG_TEXT ": Could not open boot image (%s)!\n", nokexec_s.path_boot_mmcblk);
+        return -1;
+    }
+
+    // Update the boot.img
+    img.hdr.name[BOOT_NAME_SIZE-1] = 0x70;
+
+    INFO(NO_KEXEC_LOG_TEXT ": Writing boot.img updated with secondary flag set\n");
+    if (libbootimg_write_img(&img, "/dev/block/bootdevice/by-name/boot") < 0)
     {
         ERROR("Failed to libbootimg_write_img!\n");
     }
@@ -327,6 +389,26 @@ int nokexec_is_secondary_in_primary(const char *path_boot_mmcblk)
     return res;
 }
 
+int nokexec_is_skip_mr_flag(const char *path_boot_mmcblk)
+{
+    int res = 0;
+    struct boot_img_hdr hdr;
+
+    if (libbootimg_load_header(&hdr, path_boot_mmcblk) < 0)
+    {
+        ERROR(NO_KEXEC_LOG_TEXT ": Could not open boot image (%s)!\n", path_boot_mmcblk);
+        res = -1;
+    }
+    else
+    {
+        if (hdr.name[BOOT_NAME_SIZE-1] == 0x72)
+            res = 1;
+    }
+    INFO(NO_KEXEC_LOG_TEXT ": Checking the primary slot bootimg for the secondary tag; res=%d\n", res);
+
+    return res;
+}
+
 int nokexec_is_new_primary(void)
 {
     int is_new = 0;
@@ -382,6 +464,40 @@ int nokexec_is_second_boot(void)
     return is_second_boot;
 }
 
+int nokexec_is_skip_mr(void)
+{
+    static int is_second_boot = -1;
+    if(is_second_boot != -1) {
+        INFO(NO_KEXEC_LOG_TEXT ": returning cached info is_second_boot=%d\n", is_second_boot);
+        return is_second_boot;
+    }
+
+    int res;
+    INFO(NO_KEXEC_LOG_TEXT ": Checking primary slot...\n");
+    char * path_boot_mmcblk = nokexec_find_boot_mmcblk_path(NULL);
+    if (!path_boot_mmcblk)
+        return -1;
+
+    res = nokexec_is_skip_mr_flag(path_boot_mmcblk);
+    free(path_boot_mmcblk);
+
+    if (res < 0)
+        return -1;
+    else if (res == 1)
+    {
+        // it's a secondary boot.img so set second_boot=1
+        INFO(NO_KEXEC_LOG_TEXT ":    secondary bootimg, so second_boot=1\n");
+        is_second_boot = 1;
+    }
+    else
+    {
+        INFO(NO_KEXEC_LOG_TEXT ":    primary bootimg, so second_boot=0\n");
+        is_second_boot = 0;
+    }
+
+    return is_second_boot;
+}
+
 
 int nokexec_flash_secondary_bootimg(struct multirom_rom *secondary_rom)
 {
@@ -408,6 +524,26 @@ int nokexec_flash_secondary_bootimg(struct multirom_rom *secondary_rom)
 
     // make note that the primary slot now contains a secondary boot.img
     if (nokexec_set_secondary_flag())
+        return -4;
+
+    return 0;
+}
+
+int nokexec_flash_skip_mr_bootimg(struct multirom_rom *secondary_rom)
+{
+    // make sure all the paths are set up, otherwise abort
+    if (!nokexec_s.path_boot_mmcblk || !nokexec_s.path_primary_bootimg)
+        return -1;
+
+    // now flash the secondary boot.img to primary slot
+    char path_bootimg[256];
+    sprintf(path_bootimg, "%s/%s", secondary_rom->base_path, "boot.img");
+
+    if (nokexec_flash_to_primary(path_bootimg))
+        return -3;
+
+    // make note that the primary slot now contains a secondary boot.img
+    if (nokexec_set_skip_mr_flag())
         return -4;
 
     return 0;
