@@ -988,11 +988,11 @@ int mount_image(const char *src, const char *dst, const char *fs, int flags, con
 #define MULTIROM_DEV_PATH "/multirom/dev"
 int multirom_mount_image(const char *src, const char *dst, const char *fs, int flags, const void *data)
 {
-    static int next_loop_num = MULTIROM_LOOP_NUM_START;
     char path[64];
+    int loop_num = -1;
+    int res = 0;
+    /*static int next_loop_num = MULTIROM_LOOP_NUM_START;
     int device_fd;
-    int loop_num = 0;
-    int res = -1;
     struct stat info;
     struct loop_info64 lo_info;
 
@@ -1018,27 +1018,36 @@ int multirom_mount_image(const char *src, const char *dst, const char *fs, int f
     {
         ERROR("mount_image: failed to find suitable loop device number!\n");
         return -1;
-    }
+    }*/
 
     // now change to /multirom/dev/<partition name>
     mkdir_recursive_with_perms(MULTIROM_DEV_PATH, 0777, NULL, NULL);
     sprintf(path, MULTIROM_DEV_PATH "/%s", dst);
 
 create_loop:
-    if(create_loop_device(path, src, loop_num, 0777) < 0)
+    if(create_loop_device(path, src, loop_num, 0777) < 0) {
         res = -1;
-
-    // never reuse an existing loop
-    next_loop_num = loop_num + 1;
-
-    if(mount(path, dst, fs, flags, data) < 0)
-        ERROR("Failed to mount loop (%d: %s)\n", errno, strerror(errno));
-    else
+    } else {
         res = 0;
+    }
 
-    if(res) {
-        if (loop_num == MULTIROM_LOOP_NUM_START)
+
+    if (res != -1) {
+        if(mount(path, dst, fs, flags, data) < 0) {
+            ERROR("Failed to mount loop (%d: %s)\n", errno, strerror(errno));
+            res = -1;
+        } else {
+            res = 0;
+        }
+    }
+
+    INFO("multirom create loop device %d\n", loop_num);
+    //multirom_kmsg_logging(BACKUP_LATE_KLOG);
+    if(res && loop_num < MAX_LOOP_NUM) {
+        if (loop_num == -1)
             loop_num = 0;
+        else
+            loop_num = loop_num + 1;
         sprintf(path, "/dev/block/loop%d", loop_num);
         goto create_loop;
     }

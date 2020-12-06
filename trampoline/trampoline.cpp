@@ -319,7 +319,7 @@ static int mount_and_run(struct fstab *fstab)
 #endif
     }
 
-    if (ret == -2 && !nokexec_is_skip_mr()) {
+    if ((ret == -2 && !nokexec_is_skip_mr()) || ret != -2) {
         INFO("skip mr flag false.. running multirom");
         if(find_multirom() == -1)
         {
