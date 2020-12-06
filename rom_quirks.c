@@ -309,7 +309,15 @@ void rom_quirks_change_patch_and_osver(struct multirom_status *s, struct multiro
     char* existing_level_raw = convert_to_raw(existing_level);
     char* existing_ver_raw = convert_to_raw(existing_ver);
 
-    INFO("primary %s existing %s", primary_os_level_raw, existing_level_raw);
+    if (strtol(existing_ver_raw, NULL, 10) >= 1100) {
+        free(patchstring);
+        asprintf(&patchstring, "%s=%s\n%s=%s\n%s=%s", "ro.build.version.security_patch", primary_os_level, "ro.build.version.release", primary_os_version, "ro.build.version.release_or_codename", primary_os_version);
+        free(filebuf);
+        filebuf = calloc(1, size + strlen(patchstring));
+
+    }
+
+    INFO("primary %s %s existing %s", primary_os_level_raw, primary_os_ver_raw, existing_level_raw, existing_ver_raw);
 
     if (strtol(primary_os_ver_raw, NULL, 10) != strtol(existing_ver_raw, NULL, 10) || strtol(primary_os_level_raw, NULL, 10) != strtol(existing_level_raw, NULL, 10) || s->use_primary_kernel || !to_boot->has_bootimg) {
 
