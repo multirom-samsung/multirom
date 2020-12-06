@@ -1556,7 +1556,9 @@ int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to
                     umount("/system_root");
                     //disable_dtb_fstab("system");
                 }
-                nokexec_set_skip_mr_flag();
+                if (always_reboot) {
+                    nokexec_set_skip_mr_flag();
+                }
                 //if (mount_dtb_fstab("vendor") == 0) {
                     //disable_dtb_fstab("vendor");
                // }
@@ -1806,7 +1808,7 @@ bool LoadSplitPolicy()
     if (!access(plat_policy_cil_file_sar, F_OK)) {
         plat_policy_cil_file = plat_policy_cil_file_sar;
     }
-    char mapping_file_sar[] = "/system/system/etc/selinux/mapping/29.0.cil";
+    char mapping_file_sar[] = "/system/system/etc/selinux/mapping/30.0.cil";
     if (!access(mapping_file_sar, F_OK)) {
         mapping_file = mapping_file_sar;
     }
