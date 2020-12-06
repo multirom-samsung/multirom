@@ -92,6 +92,9 @@ endif
 # adbd
 include $(multirom_local_path)/adbd/Android.mk
 
+# freetype
+include $(multirom_local_path)/freetype/Android.mk
+
 # trampoline_encmnt
 ifeq ($(MR_ENCRYPTION),true)
 include $(multirom_local_path)/trampoline_encmnt/Android.mk
