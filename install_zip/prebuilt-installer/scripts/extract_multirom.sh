@@ -9,6 +9,9 @@ if [ -d "/data/media/multirom" ] && [ ! -d "/data/media/MultiROM/multirom" ]; th
 elif [ -d "/data/media/0/multirom" ] && [ ! -d "/data/media/0/MultiROM/multirom" ]; then
     mkdir "/data/media/0/MultiROM"
     mv "/data/media/0/multirom" "/data/media/0/MultiROM/multirom"
+elif [ -d "/data/media/0/MultiROM/multirom" ] && [ ! -d "/data/media/MultiROM/multirom" ]; then
+    mkdir "/data/media/MultiROM"
+    mv "/data/media/0/MultiROM/multirom" "/data/media/MultiROM/multirom"
 fi
 
 # Check for existing dirs otherwise create them
@@ -19,13 +22,8 @@ elif [ -d "/data/media/0/MultiROM/multirom" ] ; then
     cont="/data/media/0/MultiROM"
     base="/data/media/0/MultiROM/multirom"
 else
-    if [ -d "/data/media/0" ] ; then
-        cont="/data/media/0/MultiROM"
-        base="/data/media/0/MultiROM/multirom"
-    else
-        cont="/data/media/MultiROM"
-        base="/data/media/MultiROM/multirom"
-    fi
+    cont="/data/media/MultiROM"
+    base="/data/media/MultiROM/multirom"
 
     mkdir "$cont"
     chown root:root "$cont"

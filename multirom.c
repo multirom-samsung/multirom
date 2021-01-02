@@ -1531,7 +1531,7 @@ struct multirom_rom *multirom_get_rom_by_id(struct multirom_status *s, int id)
 
 int multirom_prepare_for_boot(struct multirom_status *s, struct multirom_rom *to_boot, int always_reboot)
 {
-    int exit = always_reboot ? (EXIT_REBOOT | EXIT_UMOUNT) : EXIT_UMOUNT;
+    int exit = EXIT_UMOUNT;
     int type = to_boot->type;
 
 
