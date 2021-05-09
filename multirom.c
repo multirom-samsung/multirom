@@ -100,7 +100,7 @@ void disable_dtb_fstab(char* partition) {
 #ifdef MR_USE_MROM_FAKEFSTAB
         DIR* dir = opendir("/proc/device-tree/firmware/android");
         char** exclude_dirs = NULL;
-        copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab", exclude_dirs);
+        copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefsbat", exclude_dirs);
 #endif
         FILE* fp = fopen("status", "w");
         fprintf(fp, "disabled");
@@ -108,7 +108,7 @@ void disable_dtb_fstab(char* partition) {
     }
 #ifdef MR_USE_MROM_FAKEFSTAB
     char path[256];
-    sprintf(path, "/fakefstab/fstab/%s/status", partition);
+    sprintf(path, "/fakefsbat/fstab/%s/status", partition);
     copy_file("/status", path);
 #else
     char mnt_pt[100];
@@ -126,8 +126,8 @@ void remove_dtb_fstab() {
 #ifdef MR_USE_MROM_FAKEFSTAB
     DIR* dir = opendir("/proc/device-tree/firmware/android");
     char** exclude_dirs = NULL;
-    copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab", exclude_dirs);
-    if (!mount("/dummy_fw", "/fakefstab", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
+    copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefsbat", exclude_dirs);
+    if (!mount("/dummy_fw", "/fakefsbat", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
 #else
     if (!mount("/dummy_fw", "/proc/device-tree/firmware", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
 #endif
@@ -139,6 +139,11 @@ void remove_dtb_fstab() {
 
 int multirom_is_android10() {
     if (!multirom_path_exists("/", "apex")) {
+        INFO("APEX folder found\n");
+        return 1;
+    }
+    if (!multirom_path_exists("/system", "system/bin/init")) {
+        INFO("system/bin/init found\n");
         return 1;
     }
     char* initPath = "/main_init";
@@ -146,15 +151,20 @@ int multirom_is_android10() {
         initPath = "/.backup/init";
     }
 
-    char *addr;
+    void *addr;
     int initfd = open(initPath, O_RDWR);
+    INFO("open file %s result %d\n", initPath, initfd);
     struct stat st;
     lstat(initPath, &st);
     size_t size = st.st_size;
-    addr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, initfd, 0);
-    int contains = strstr(addr, "selinux_setup") != NULL;
+    addr = mmap(NULL, size, PROT_READ, MAP_SHARED, initfd, 0);
+    if (addr == MAP_FAILED) {
+       INFO("mmap error! %s\n", strerror(errno));
+    }
+    int contains = memmem(addr, size, "selinux_setup", 13) != NULL;
     munmap(addr, size);
     close(initfd);
+    INFO("init contains selinux_setup %d\n", contains);
     return contains;
 }
 
@@ -1977,6 +1987,7 @@ int multirom_prep_android_mounts(__unused struct multirom_status *s, struct mult
     asprintf(&system_path, "%s/system.sparse.img", rom->base_path);
 
    if (!multirom_path_exists("/system", "init.rc") && !multirom_is_android10()) {
+       INFO("ROM is not android 10\n");
        umount("/system");
        mkdir_with_perms("/system_root", 0755, NULL, NULL);
        multirom_mount_image(system_path, "/system_root", "ext4", MS_RDONLY, NULL);
@@ -1993,6 +2004,7 @@ int multirom_prep_android_mounts(__unused struct multirom_status *s, struct mult
        char* exclude_dirs[] = {"system", "vendor", "product", NULL};
        copy_init_contents(dir, "/system_root", "/", true, exclude_dirs);
    } else if (multirom_is_android10()) {
+       INFO("ROM is android 10+\n");
        umount("/system");
        mkdir_with_perms("/system_root", 0755, NULL, NULL);
        multirom_mount_image(system_path, "/system_root", "ext4", MS_RDONLY, NULL);
