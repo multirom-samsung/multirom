@@ -345,7 +345,7 @@ int inject_cmdline(struct bootimg *image)
     int res = 0;
     char* custom_cmdline = "printk.devkmsg=on";
 #ifdef MR_USE_MROM_FAKEFSTAB
-    char* fakefstab_cmdline = "androidboot.android_dt_dir=/fakefstab/";
+    char* fakefstab_cmdline = "androidboot.android_dt_dir=/fakefsbat/";
 #endif
 
     char* cmdline = libbootimg_get_cmdline(&image->hdr);
