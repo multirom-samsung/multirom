@@ -702,9 +702,9 @@ run_main_init:
 #endif
 
 #ifdef MR_USE_MROM_FAKEFSTAB
-    if (access("/fakefstab/", F_OK)) {
+    if (access("/fakefsbat/", F_OK)) {
         DIR* dir = opendir("/proc/device-tree/firmware/android");
-        copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab", NULL);
+        copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefsbat", NULL);
         //remove("/fakefstab/fstab/system/mnt_point");
         closedir(dir);
         //remove("/fakefstab/fstab/vendor/mnt_point");
