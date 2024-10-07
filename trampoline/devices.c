@@ -65,12 +65,12 @@
 
 #define SYSFS_PREFIX    "/sys"
 
-static const char *firmware_dirs[] = { "/etc/firmware",
+/*static const char *firmware_dirs[] = { "/etc/firmware",
                                        "/vendor/firmware",
 #ifdef MR_EXTRA_FIRMWARE_DIR
                                        MR_EXTRA_FIRMWARE_DIR,
 #endif
-                                       "/firmware/image" };
+                                       "/firmware/image" };*/
 
 #ifdef HAVE_SELINUX
 static struct selabel_handle *sehandle;
@@ -302,7 +302,6 @@ void fixup_sys_perms(const char *upath)
 
 static mode_t get_device_perm(const char *path, unsigned *uid, unsigned *gid)
 {
-    mode_t perm;
     struct listnode *node;
     struct perm_node *perm_node;
     struct perms_ *dp;
@@ -596,15 +595,9 @@ static char **parse_platform_block_device(struct uevent *uevent)
     const char *device;
     struct platform_node *pdev;
     char *slash;
-    int width;
-    char buf[256];
     char link_path[256];
-    int fd;
     int link_num = 0;
-    int ret;
     char *p;
-    unsigned int size;
-    struct stat info;
 
     pdev = find_platform_device(uevent->path);
     if (!pdev)
@@ -854,7 +847,7 @@ static void handle_device_event(struct uevent *uevent)
     }
 }
 
-static int load_firmware(int fw_fd, int loading_fd, int data_fd)
+/*static int load_firmware(int fw_fd, int loading_fd, int data_fd)
 {
     struct stat st;
     long len_to_copy;
@@ -864,7 +857,7 @@ static int load_firmware(int fw_fd, int loading_fd, int data_fd)
         return -1;
     len_to_copy = st.st_size;
 
-    write(loading_fd, "1", 1);  /* start transfer */
+    write(loading_fd, "1", 1);  // start transfer
 
     while (len_to_copy > 0) {
         char buf[PAGE_SIZE];
@@ -893,23 +886,23 @@ static int load_firmware(int fw_fd, int loading_fd, int data_fd)
 
 out:
     if(!ret)
-        write(loading_fd, "0", 1);  /* successful end of transfer */
+        write(loading_fd, "0", 1);  // successful end of transfer
     else
-        write(loading_fd, "-1", 2); /* abort transfer */
+        write(loading_fd, "-1", 2); // abort transfer
 
     return ret;
-}
+}*/
 
-static int is_booting(void)
+/*static int is_booting(void)
 {
     return access("/dev/.booting", F_OK) == 0;
-}
+}*/
 
 static void process_firmware_event(struct uevent *uevent)
 {
     char *root, *loading, *data;
-    int l, loading_fd, data_fd, fw_fd, i;
-    int booting = is_booting();
+    int l, loading_fd, data_fd, fw_fd=0;
+    //int booting = is_booting();
 
     DEBUG("firmware: loading '%s' for '%s'\n",
          uevent->firmware, uevent->path);
@@ -934,7 +927,8 @@ static void process_firmware_event(struct uevent *uevent)
     if(data_fd < 0)
         goto loading_close_out;
 
-try_loading_again:
+/*try_loading_again:
+    int i;
     for (i = 0; i < ARRAY_SIZE(firmware_dirs); i++) {
         char *file = NULL;
         l = asprintf(&file, "%s/%s", firmware_dirs[i], uevent->firmware);
@@ -949,7 +943,7 @@ try_loading_again:
                 INFO("firmware: copy failure { '%s', '%s' }\n", root, uevent->firmware);
             break;
         }
-    }
+    }*/
 
     if (fw_fd < 0) {
 // disable for multirom to prevent loop
@@ -984,7 +978,6 @@ root_free_out:
 static void handle_firmware_event(struct uevent *uevent)
 {
     pid_t pid;
-    int ret;
 
     if(strcmp(uevent->subsystem, "firmware"))
         return;

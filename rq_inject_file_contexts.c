@@ -342,6 +342,7 @@ static int inject_file_contexts_bin(const char *path)
     bin_file_in = fopen(path, "rb");
     if (!bin_file_in) {
         ERROR("Failed to open '%s' for reading!\n", path);
+        fclose(bin_file_in);
         return -1;
     }
 
@@ -373,7 +374,9 @@ static int inject_file_contexts_bin(const char *path)
     bin_file_out = fopen(tmp_name, "w");
     if (!bin_file_out) {
         ERROR("Failed to open '%s' for writing!\n", tmp_name);
+        fclose(bin_file_out);
         fclose(bin_file_in);
+        remove(tmp_name);
         free(tmp_name);
         return -1;
     }
@@ -451,8 +454,13 @@ static int inject_file_contexts_bin(const char *path)
         INFO("/file_contexts.bin has been already injected.\n");
         for (i = 0; i < number_of_stems; i++)
             free(stem_array[i].stem_string);
+
         free(stem_array);
-        goto noerr;
+        fclose(bin_file_out);
+        fclose(bin_file_in);
+        remove(tmp_name);
+        free(tmp_name);
+        return 0;
     }
 
     INFO("Injecting /file_contexts.bin\n");
@@ -583,7 +591,6 @@ static int inject_file_contexts_bin(const char *path)
         //else error
     }
 
-out:
     fclose(bin_file_out);
     fclose(bin_file_in);
     rename(tmp_name, path);
@@ -594,18 +601,6 @@ out:
 #endif
     free(tmp_name);
     return 0;
-noerr:
-    fclose(bin_file_out);
-    fclose(bin_file_in);
-    remove(tmp_name);
-    free(tmp_name);
-    return 0;
-err:
-    fclose(bin_file_out);
-    fclose(bin_file_in);
-    remove(tmp_name);
-    free(tmp_name);
-    return -2;
 }
 /* ************************************************************************************************************************************************ */
 

@@ -41,7 +41,7 @@ static char *const encmnt_envp[] = { "LD_LIBRARY_PATH=/mrom_enc/", NULL };
 #endif
 static int g_decrypted = 0;
 
-int encryption_before_mount(struct fstab *fstab)
+int encryption_before_mount(__unused struct fstab *fstab)
 {
     int exit_code = -1;
     char *output = NULL, *itr;

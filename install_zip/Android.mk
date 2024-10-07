@@ -12,12 +12,6 @@ ifeq ($(MR_FSTAB),)
     $(info MR_FSTAB not defined in device files)
 endif
 
-ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 24; echo $$?),0)
-    MIN_SDK_VERSION_ARGS = --min-sdk-version $(PLATFORM_SDK_VERSION)
-else
-    MIN_SDK_VERSION_ARGS =
-endif
-
 multirom_extra_dep :=
 ifeq ($(MR_ENCRYPTION),true)
 	multirom_extra_dep += trampoline_encmnt linker
@@ -52,7 +46,7 @@ ifeq ($(MR_NO_KEXEC),)
 	multirom_extra_dep += mrom_kexec_static
 endif
 
-$(MULTIROM_ZIP_TARGET): multirom trampoline signapk bbootimg mrom_adbd $(multirom_extra_dep)
+$(MULTIROM_ZIP_TARGET): multirom trampoline bbootimg mrom_adbd $(multirom_extra_dep)
 	@echo
 	@echo
 	@echo "A crowdfunding campaign for MultiROM took place in 2013. These people got perk 'The Tenth':"
@@ -122,7 +116,7 @@ $(MULTIROM_ZIP_TARGET): multirom trampoline signapk bbootimg mrom_adbd $(multiro
 	@echo Signing flashable zip
 	@rm -f $(MULTIROM_ZIP_TARGET).zip $(MULTIROM_ZIP_TARGET)-unsigned.zip
 	@cd $(MULTIROM_INST_DIR) && zip -qr ../$(notdir $@)-unsigned.zip *
-	@java -Djava.library.path=$(SIGNAPK_JNI_LIBRARY_PATH) -jar $(HOST_OUT_JAVA_LIBRARIES)/signapk.jar $(MIN_SDK_VERSION_ARGS) $(DEFAULT_SYSTEM_DEV_CERTIFICATE).x509.pem $(DEFAULT_SYSTEM_DEV_CERTIFICATE).pk8 $(MULTIROM_ZIP_TARGET)-unsigned.zip $(MULTIROM_ZIP_TARGET).zip
+	@java -jar $(install_zip_path)/signapk.jar $(install_zip_path)/platform.x509.pem $(install_zip_path)/platform.pk8 $(MULTIROM_ZIP_TARGET)-unsigned.zip $(MULTIROM_ZIP_TARGET).zip
 	@$(install_zip_path)/rename_zip.sh $(MULTIROM_ZIP_TARGET) $(TARGET_DEVICE) $(PWD)/$(multirom_local_path)/version.h $(MR_DEVICE_SPECIFIC_VERSION)
 	@echo ----- Made MultiROM ZIP installer -------- $@.zip
 
@@ -134,7 +128,7 @@ multirom_zip: $(MULTIROM_ZIP_TARGET)
 MULTIROM_UNINST_TARGET := $(PRODUCT_OUT)/multirom_uninstaller
 MULTIROM_UNINST_DIR := $(PRODUCT_OUT)/multirom_uninstaller
 
-$(MULTIROM_UNINST_TARGET): signapk bbootimg
+$(MULTIROM_UNINST_TARGET): bbootimg
 	@echo ----- Making MultiROM uninstaller ------
 	@rm -rf $(MULTIROM_UNINST_DIR)
 	@mkdir -p $(MULTIROM_UNINST_DIR)
@@ -148,7 +142,7 @@ $(MULTIROM_UNINST_TARGET): signapk bbootimg
 	@echo Signing flashable zip
 	@rm -f $(MULTIROM_UNINST_TARGET).zip $(MULTIROM_UNINST_TARGET)-unsigned.zip
 	@cd $(MULTIROM_UNINST_DIR) && zip -qr ../$(notdir $@)-unsigned.zip *
-	@java -Djava.library.path=$(SIGNAPK_JNI_LIBRARY_PATH) -jar $(HOST_OUT_JAVA_LIBRARIES)/signapk.jar $(MIN_SDK_VERSION_ARGS) $(DEFAULT_SYSTEM_DEV_CERTIFICATE).x509.pem $(DEFAULT_SYSTEM_DEV_CERTIFICATE).pk8 $(MULTIROM_UNINST_TARGET)-unsigned.zip $(MULTIROM_UNINST_TARGET).zip
+	@java -jar $(install_zip_path)/signapk.jar $(install_zip_path)/platform.x509.pem $(install_zip_path)/platform.pk8 $(MULTIROM_UNINST_TARGET)-unsigned.zip $(MULTIROM_UNINST_TARGET).zip
 	@$(install_zip_path)/rename_zip.sh $(MULTIROM_UNINST_TARGET) $(TARGET_DEVICE) $(PWD)/$(multirom_local_path)/version.h $(MR_DEVICE_SPECIFIC_VERSION)
 	@echo ----- Made MultiROM uninstaller -------- $@.zip
 
@@ -160,7 +154,7 @@ multirom_uninstaller: $(MULTIROM_UNINST_TARGET)
 KERNEL_ZIP_TARGET := $(PRODUCT_OUT)/multirom_kernel
 KERNEL_INST_DIR := $(PRODUCT_OUT)/multirom_kernel_installer
 
-$(KERNEL_ZIP_TARGET): $(PRODUCT_OUT)/kernel kernel_inject signapk
+$(KERNEL_ZIP_TARGET): $(PRODUCT_OUT)/kernel kernel_inject
 	@echo ----- Making MultiROM Kernel ZIP installer ------
 	rm -rf $(KERNEL_INST_DIR)
 	mkdir -p $(KERNEL_INST_DIR)
@@ -173,7 +167,7 @@ $(KERNEL_ZIP_TARGET): $(PRODUCT_OUT)/kernel kernel_inject signapk
 	$(install_zip_path)/make_updater_script.sh "$(MR_DEVICES)" $(KERNEL_INST_DIR)/META-INF/com/google/android "Installing Kernel for"
 	rm -f $(KERNEL_ZIP_TARGET).zip $(KERNEL_ZIP_TARGET)-unsigned.zip
 	cd $(KERNEL_INST_DIR) && zip -qr ../$(notdir $@)-unsigned.zip *
-	java -Djava.library.path=$(SIGNAPK_JNI_LIBRARY_PATH) -jar $(HOST_OUT_JAVA_LIBRARIES)/signapk.jar $(MIN_SDK_VERSION_ARGS) $(DEFAULT_SYSTEM_DEV_CERTIFICATE).x509.pem $(DEFAULT_SYSTEM_DEV_CERTIFICATE).pk8 $(KERNEL_ZIP_TARGET)-unsigned.zip $(KERNEL_ZIP_TARGET).zip
+	java -jar $(install_zip_path)/signapk.jar $(install_zip_path)/platform.x509.pem $(install_zip_path)/platform.pk8 $(KERNEL_ZIP_TARGET)-unsigned.zip $(KERNEL_ZIP_TARGET).zip
 	$(install_zip_path)/rename_zip.sh $(KERNEL_ZIP_TARGET) $(TARGET_DEVICE) $(PWD)/$(multirom_local_path)/version.h
 	@echo ----- Made MultiROM Kernel ZIP installer -------- $@.zip
 

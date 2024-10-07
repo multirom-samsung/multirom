@@ -104,8 +104,7 @@ static px_type *load_png(const char *path, int destW, int destH)
     uint32_t bytes_per_row;
     px_type *data_dest = NULL, *data_itr;
     size_t i, y;
-    int si, alpha;
-    int px_per_row;
+    int si;
     uint32_t src_pix;
     png_bytep *rows = NULL;
 

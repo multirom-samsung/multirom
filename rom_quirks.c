@@ -226,12 +226,12 @@ char* convert_to_raw(char* str) {
     strcpy(temp, str);
     temp[j] = '\0';
     if (strstr(temp, ".")) {
-        while (token = strsep(&temp, ".")) {
+        while ((token = strsep(&temp, "."))) {
             strcpy(out + i, token);
             i += strlen(token);
         }
     } else if(strstr(temp, "-")) {
-        while (token = strsep(&temp, "-")) {
+        while ((token = strsep(&temp, "-"))) {
             strcpy(out + i, token);
             i += strlen(token);
         }
@@ -264,15 +264,15 @@ void rom_quirks_change_patch_and_osver() {
     char* primary_os_level_raw = libbootimg_get_oslevel(&primary_img.hdr, true);
     libbootimg_destroy(&primary_img);
 
-    sourcefile = open(path, O_RDONLY, 0644);
+    sourcefile = open(path, O_RDONLY | O_CREAT, 0644);
 
     if (sourcefile == -1) {
         ERROR("open failed! %s\n", strerror(errno));
     }
 
     struct stat stats;
-    int         status;
-    int size;
+    int status;
+    int size=0;
 
     status = stat(path, &stats);
     if(status == 0) {

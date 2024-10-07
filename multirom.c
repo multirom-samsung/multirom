@@ -1185,9 +1185,6 @@ void multirom_find_usb_roms(struct multirom_status *s)
         else ++i;
     }
 
-    char path[256];
-    struct usb_partition *p;
-
     pthread_mutex_lock(&parts_mutex);
     for(i = 0; s->partitions && s->partitions[i]; ++i)
         multirom_scan_partition_for_roms(s, s->partitions[i]);
@@ -1208,7 +1205,6 @@ void multirom_find_usb_roms(struct multirom_status *s)
 int multirom_scan_partition_for_roms(struct multirom_status *s, struct usb_partition *p)
 {
     char path[256];
-    int i;
     struct dirent *dr;
     struct multirom_rom **add_roms = NULL;
 
@@ -1622,7 +1618,7 @@ int multirom_prep_android_mounts(struct multirom_status *s, struct multirom_rom 
 
     while((dp = readdir(d)))
     {
-        if((dp->d_name[0] == '.' && strlen(dp->d_name) == 1) || (dp->d_name[0] == '.' && (dp->d_name[1] == '.') || dp->d_name[1] == 0))
+        if((dp->d_name[0] == '.' && strlen(dp->d_name) == 1) || ((dp->d_name[0] == '.' && (dp->d_name[1] == '.')) || dp->d_name[1] == 0))
             continue;
 
         if (dp->d_type == DT_DIR) {
@@ -1850,9 +1846,9 @@ int multirom_process_android_fstab(char *fstab_name, int has_fw, struct fstab_pa
     int disable_sys = fstab_disable_parts(tab, "/system");
     int disable_data = fstab_disable_parts(tab, "/data");
     int disable_cache = fstab_disable_parts(tab, "/cache");
-    int disable_vendor = fstab_disable_parts(tab, "/vendor");
+    //int disable_vendor = fstab_disable_parts(tab, "/vendor");
 
-    if((!treble_fstab) && disable_sys < 0 || disable_data < 0 || disable_cache < 0)
+    if(((!treble_fstab) && disable_sys < 0) || disable_data < 0 || disable_cache < 0)
     {
 #if MR_DEVICE_HOOKS >= 4
         if(!mrom_hook_allow_incomplete_fstab())
@@ -1948,7 +1944,7 @@ int multirom_create_media_link(struct multirom_status *s)
         if(!media_new) from = 0;
         else           from = 1;
     }
-    else if(api_level >= 17)
+    else
     {
         from = 0;
         if(!media_new) to = 3;
@@ -2204,7 +2200,6 @@ int multirom_find_file(char *res, const char *name_part, const char *path)
         return -1;
 
     int wild = 0;
-    int len = strlen(name_part);
     char *name = (char*)name_part;
     char *i;
     if((i = strchr(name_part, '*')))
@@ -2370,7 +2365,6 @@ static char *find_boot_file(char *path, char *root_path, char *base_path)
     if(!path)
         return NULL;
 
-    struct stat info;
     char cmd[256];
     char *root = strstr(path, "%r");
     if(root)
@@ -2674,7 +2668,6 @@ int multirom_replace_aliases_cmdline(char **s, struct rom_info *i, struct multir
 
     char *itr_o = buff;
     char *itr_i = *s;
-    int res = -1;
 
     while(1)
     {
@@ -3082,7 +3075,7 @@ void *multirom_usb_refresh_thread_work(void *status)
         if(timer <= 50)
         {
             if (stat("/dev/block", &info) >= 0 &&
-                (info.st_ctime != last_ctime || info.st_ctimensec != last_ctime_nsec))
+                ((unsigned long)info.st_ctime != last_ctime || (unsigned long)info.st_ctimensec != last_ctime_nsec))
             {
                 multirom_update_partitions((struct multirom_status*)status);
 

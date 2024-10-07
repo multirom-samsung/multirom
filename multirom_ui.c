@@ -77,7 +77,7 @@ uint32_t CLR_SECONDARY = LBLUE2;
 #define LOOP_START_PONG 0x02
 #define LOOP_CHANGE_CLR 0x04
 
-static void list_block(char *path, int rec)
+/*static void list_block(char *path, int rec)
 {
     ERROR("Listing %s", path);
     DIR *d = opendir(path);
@@ -88,7 +88,6 @@ static void list_block(char *path, int rec)
     }
 
     struct dirent *dr;
-    struct stat info;
     while((dr = readdir(d)))
     {
         if(dr->d_name[0] == '.')
@@ -104,7 +103,7 @@ static void list_block(char *path, int rec)
     }
 
     closedir(d);
-}
+}*/
 
 static void reveal_rect_alpha_step(void *data, float interpolated)
 {

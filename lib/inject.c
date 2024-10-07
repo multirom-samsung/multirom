@@ -155,7 +155,6 @@ static int inject_second_rd(const char *path, const char *second_path)
     mkdir(TMP_RD2_UNPACKED_DIR, 0755);
 
     // Decompress initrd
-    int type;
     char buff[256];
     char busybox_path[256];
     snprintf(busybox_path, sizeof(busybox_path), "%s/busybox", mrom_dir());
@@ -189,8 +188,8 @@ static int inject_second_rd(const char *path, const char *second_path)
         ERROR("Failed to pack ramdisk.cpio!\n");
         goto fail;
     }
-success:
     result = 0;
+    return result;
 fail:
     remove_dir(TMP_RD2_UNPACKED_DIR);
     return result;

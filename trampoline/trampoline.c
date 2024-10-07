@@ -277,7 +277,7 @@ static void fixup_symlinks(void)
         if(lstat(init_links[i], &info) < 0 || !S_ISLNK(info.st_mode))
             continue;
 
-        if (info.st_size < sizeof(buff)-1)
+        if ((unsigned long)info.st_size < sizeof(buff)-1)
         {
             len = readlink(init_links[i], buff, sizeof(buff)-1);
             if(len >= 0)

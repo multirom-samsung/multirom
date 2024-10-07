@@ -34,14 +34,14 @@
 time_t gettime(void);
 unsigned int decode_uid(const char *s);
 int mkdir_recursive(const char *pathname, mode_t mode);
-int mkdir_recursive_with_perms(const char *pathname, mode_t mode, const char *owner, const char *group);
+int mkdir_recursive_with_perms(const char *pathname, mode_t mode, const char *owner, __unused const char *group);
 void sanitize(char *p);
 int make_link(const char *oldpath, const char *newpath);
 void remove_link(const char *oldpath, const char *newpath);
 int wait_for_file(const char *filename, int timeout);
 int copy_file(const char *from, const char *to);
 int copy_dir(const char *from, const char *to);
-int mkdir_with_perms(const char *path, mode_t mode, const char *owner, const char *group);
+int mkdir_with_perms(const char *path, mode_t mode, const char *owner, __unused const char *group);
 int write_file(const char *path, const char *value);
 int remove_dir(const char *dir);
 int run_cmd(char **cmd);
@@ -53,7 +53,7 @@ char *readlink_recursive(const char *link);
 void stdio_to_null();
 char *parse_string(char *src);
 uint32_t timespec_diff(struct timespec *f, struct timespec *s);
-inline int64_t timeval_us_diff(struct timeval now, struct timeval prev);
+int64_t timeval_us_diff(struct timeval now, struct timeval prev);
 void emergency_remount_ro(void);
 int create_loop_device(const char *dev_path, const char *img_path, int loop_num, int loop_chmod);
 int mount_image(const char *src, const char *dst, const char *fs, int flags, const void *data);
@@ -61,12 +61,12 @@ int multirom_mount_image(const char *src, const char *dst, const char *fs, int f
 void do_reboot(int type);
 int mr_system(const char *shell_fmt, ...);
 
-inline int imin(int a, int b);
-inline int imax(int a, int b);
-inline int iabs(int a);
-inline int in_rect(int x, int y, int rx, int ry, int rw, int rh);
+int imin(int a, int b);
+int imax(int a, int b);
+int iabs(int a);
+int in_rect(int x, int y, int rx, int ry, int rw, int rh);
 
-inline void *mzalloc(size_t size); // alloc and fill with 0s
+void *mzalloc(size_t size); // alloc and fill with 0s
 char *strtoupper(const char *str);
 int strstartswith(const char *haystack, const char *needle);
 int strendswith(const char *haystack, const char *needle);

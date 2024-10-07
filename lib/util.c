@@ -94,14 +94,12 @@ static unsigned int android_name_to_id(const char *name)
 unsigned int decode_uid(const char *s)
 {
     unsigned int v;
-    uid_t uid;
     struct passwd *pwd = NULL;
 
     if (!s || *s == '\0') {
         return -1U;
     }
     if (isalpha(s[0])) {
-
         pwd = getpwnam(s);
         if (!pwd) {
             return -errno;
@@ -123,7 +121,7 @@ int mkdir_recursive(const char *pathname, mode_t mode)
     return mkdir_recursive_with_perms(pathname, mode, NULL, NULL);
 }
 
-int mkdir_recursive_with_perms(const char *pathname, mode_t mode, const char *owner, const char *group)
+int mkdir_recursive_with_perms(const char *pathname, mode_t mode, const char *owner, __unused const char *group)
 {
     char buf[128];
     const char *slash;
@@ -157,7 +155,7 @@ int mkdir_recursive_with_perms(const char *pathname, mode_t mode, const char *ow
     return 0;
 }
 
-int mkdir_with_perms(const char *path, mode_t mode, const char *owner, const char *group)
+int mkdir_with_perms(const char *path, mode_t mode, const char *owner, __unused const char *group)
 {
     int ret;
     struct passwd *pwd = NULL;
@@ -541,7 +539,7 @@ char *readlink_recursive(const char *link)
 
     do
     {
-        if(info.st_size >= sizeof(path)-1)
+        if((unsigned long)info.st_size >= sizeof(path)-1)
         {
             ERROR("readlink_recursive(): Couldn't resolve, too long path.\n");
             return NULL;
