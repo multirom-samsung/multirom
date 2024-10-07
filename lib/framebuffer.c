@@ -95,13 +95,11 @@ int fb_open_impl(void)
     extern struct fb_impl fb_impl_ ## N; \
     impls[ID] = &fb_impl_ ## N;
 
-#ifdef MR_DEVICE_HAS_DRM_GRAPHICS
     ADD_IMPL(FB_IMPL_DRM, drm);
-#else
+    ADD_IMPL(FB_IMPL_FBDEV, fbdev);
     ADD_IMPL(FB_IMPL_GENERIC, generic);
 #ifdef MR_USE_QCOM_OVERLAY
     ADD_IMPL(FB_IMPL_QCOM_OVERLAY, qcom_overlay);
-#endif
 #endif
 
     if(fb_force_generic)
@@ -127,7 +125,6 @@ int fb_open(int rotation)
 {
     memset(&fb, 0, sizeof(struct framebuffer));
 
-#ifndef MR_DEVICE_HAS_DRM_GRAPHICS
     fb.fd = open("/dev/graphics/fb0", O_RDWR | O_CLOEXEC);
     if (fb.fd < 0)
         return -1;
@@ -179,10 +176,6 @@ int fb_open(int rotation)
 
     fb.stride = (fb_rotation%180 == 0) ? fb.vi.xres_virtual : fb.vi.yres;
     fb.size = fb.vi.xres_virtual*fb.vi.yres*PIXEL_SIZE;
-#else
-    if(fb_open_impl() < 0)
-        goto fail;
-#endif
 
     fb.buffer = malloc(fb.size);
     fb_memset(fb.buffer, fb_convert_color(BLACK), fb.size);

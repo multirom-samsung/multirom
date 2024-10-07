@@ -15,6 +15,7 @@
  */
 
 #include <drm_fourcc.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -32,8 +33,6 @@
 #include "framebuffer.h"
 #include "log.h"
 #include "util.h"
-
-#define ARRAY_SIZE(A) (sizeof(A)/sizeof(*(A)))
 
 typedef struct GRSurface {
     int width;
@@ -82,14 +81,6 @@ static void drm_enable_crtc(int drm_fd, drmModeCrtc *crtc,
 
     if (ret)
         INFO("drmModeSetCrtc failed ret=%d\n", ret);
-}
-
-static void drm_blank(bool blank, int buffer) {
-    if (blank)
-        drm_disable_crtc(drm_fd, main_monitor_crtc);
-    else
-        drm_enable_crtc(drm_fd, main_monitor_crtc,
-                        drm_surfaces[buffer]);
 }
 
 static void drm_destroy_surface(struct drm_surface *surface) {
@@ -558,7 +549,7 @@ static int drm_init(struct framebuffer *fb) {
     return 0;
 }
 
-static int drm_update(struct framebuffer *fb) {
+static int drm_update() {
     int ret;
 
     memcpy(drm_surfaces[current_buffer]->base.data,
@@ -578,12 +569,12 @@ static int drm_update(struct framebuffer *fb) {
     return 0;
 }
 
-static void* drm_get_frame_dest(struct framebuffer *fb) {
+static void* drm_get_frame_dest() {
 
     return draw_buf->data;
 }
 
-static void drm_exit(struct framebuffer *fb) {
+static void drm_exit() {
     drm_disable_crtc(drm_fd, main_monitor_crtc);
     drm_destroy_surface(drm_surfaces[0]);
     drm_destroy_surface(drm_surfaces[1]);

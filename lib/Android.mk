@@ -6,6 +6,8 @@ common_SRC_FILES := \
     colors.c \
     containers.c \
     framebuffer.c \
+    framebuffer_drm.c \
+    framebuffer_fbdev.c \
     framebuffer_generic.c \
     framebuffer_png.c \
     framebuffer_truetype.c \
@@ -21,13 +23,15 @@ common_SRC_FILES := \
     touch_tracker.c \
     util.c \
     workers.c \
-	klog.c \
+    klog.c \
 
 common_C_INCLUDES := $(multirom_local_path)/lib \
     external/libpng \
     external/zlib \
     external/freetype/include \
     system/extras/libbootimg/include \
+    external/libdrm \
+    external/libdrm/include/drm
 
 # With these, GCC optimizes aggressively enough so full-screen alpha blending
 # is quick enough to be done in an animation
@@ -58,16 +62,6 @@ ifeq ($(MR_QCOM_OVERLAY_USE_VSYNC),true)
 endif
 endif
 
-
-ifeq ($(MR_DEVICE_HAS_DRM_GRAPHICS),true)
-    common_C_FLAGS += -DMR_DEVICE_HAS_DRM_GRAPHICS
-    common_C_INCLUDES +=  \
-		external/libdrm \
-		external/libdrm/include/drm
-    common_SRC_FILES += \
-        drm.c
-endif
-
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libmultirom_static
@@ -76,9 +70,7 @@ LOCAL_MODULE_PATH := $(TARGET_ROOT_OUT)
 LOCAL_UNSTRIPPED_PATH := $(TARGET_ROOT_OUT_UNSTRIPPED)
 LOCAL_CFLAGS += $(common_C_FLAGS)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
-ifeq ($(MR_DEVICE_HAS_DRM_GRAPHICS),true)
 LOCAL_WHOLE_STATIC_LIBRARIES := libdrm
-endif
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 
 MR_NO_KEXEC_MK_OPTIONS := true 1 allowed 2 enabled 3 ui_confirm 4 ui_choice 5 forced
@@ -94,16 +86,12 @@ include $(multirom_local_path)/device_defines.mk
 
 include $(BUILD_STATIC_LIBRARY)
 
-
-
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libmultirom
 LOCAL_MODULE_TAGS := optional
 LOCAL_SHARED_LIBRARIES := libcutils libc libm libpng libz libft2
-ifeq ($(MR_DEVICE_HAS_DRM_GRAPHICS),true)
 LOCAL_WHOLE_STATIC_LIBRARIES := libdrm
-endif
 LOCAL_CFLAGS += $(common_C_FLAGS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
