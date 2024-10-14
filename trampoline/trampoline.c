@@ -578,10 +578,12 @@ run_main_init:
     umount("/sys/kernel/debug");
 #endif
 
+#ifdef MR_USE_MROM_FAKEFSTAB
     if (access("/fakefstab/", F_OK)) {
         DIR* dir = opendir("/proc/device-tree/firmware/android");
         copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab");
     }
+#endif
     umount("/proc");
     umount("/sys/fs/pstore");
     umount("/sys/fs/selinux");
