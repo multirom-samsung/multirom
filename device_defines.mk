@@ -125,6 +125,10 @@ ifeq ($(MR_USE_MROM_FSTAB),true)
     LOCAL_CFLAGS += -DMR_USE_MROM_FSTAB
 endif
 
+ifeq ($(MR_USE_MROM_FAKEFSTAB),true)
+    LOCAL_CFLAGS += -DMR_USE_MROM_FAKEFSTAB
+endif
+
 ifeq ($(MR_ENCRYPTION),true)
     LOCAL_CFLAGS += -DMR_ENCRYPTION
 endif
