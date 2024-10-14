@@ -92,22 +92,38 @@ bool LoadSplitPolicy();
 
 void disable_dtb_fstab(char* partition) {
     if (access("status", F_OK)) {
+#ifdef MR_USE_MROM_FAKEFSTAB
         DIR* dir = opendir("/proc/device-tree/firmware/android");
         copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab");
+#endif
         FILE* fp = fopen("status", "w");
         fprintf(fp, "disabled");
         fclose(fp);
     }
+#ifdef MR_USE_MROM_FAKEFSTAB
     char path[256];
     sprintf(path, "/fakefstab/fstab/%s/status", partition);
     copy_file("/status", path);
+#else
+    char mnt_pt[100];
+    sprintf(mnt_pt, "%s%s/status", DT_FSTAB_PATH, partition);
+    if (!mount("/status", mnt_pt, "ext4", MS_BIND, "discard,nomblk_io_submit")) {
+        INFO("status node bind mounted in procfs\n");
+    } else {
+        ERROR("status node bind mount failed! %s\n", strerror(errno));
+    }
+#endif
 }
 
 void remove_dtb_fstab() {
     mkdir("/dummy_fw", S_IFDIR);
+#ifdef MR_USE_MROM_FAKEFSTAB
     DIR* dir = opendir("/proc/device-tree/firmware/android");
     copy_dir_contents(dir, "/proc/device-tree/firmware/android", "/fakefstab");
     if (!mount("/dummy_fw", "/fakefstab", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
+#else
+    if (!mount("/dummy_fw", "/proc/device-tree/firmware", "ext4", MS_BIND, "discard,nomblk_io_submit")) {
+#endif
         INFO("dummy dtb node bind mounted in procfs\n");
     } else {
         ERROR("dummy dtb node bind mount failed! %s\n", strerror(errno));
