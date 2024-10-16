@@ -1386,7 +1386,7 @@ void multirom_import_internal(void)
         FILE *f = fopen(path, "we");
         if(f)
         {
-            fputs("predef_set\ncom.tassadar.multirommgr:drawable/romic_android\n", f);
+            fputs("predef_set\ncom.tassadar.multirommgr:drawable/romic_default\n", f);
             fclose(f);
         }
     }
@@ -3217,7 +3217,7 @@ int multirom_run_scripts(const char *type, struct multirom_rom *rom)
 #define IC_TYPE_USER   1
 #define USER_IC_PATH "Android/data/com.tassadar.multirommgr/files"
 #define DEFAULT_ICON "icons/romic_default.png"
-#define DEFAULT_ANDROID_ICON "icons/romic_android_default.png"
+#define DEFAULT_ANDROID_ICON "icons/romic_aosp.png"
 
 void multirom_find_rom_icon(struct multirom_rom *rom)
 {
@@ -3225,7 +3225,29 @@ void multirom_find_rom_icon(struct multirom_rom *rom)
     int type = 0, len;
     char buff[256];
 
+    // set default icon if it doesn't exist yet
     snprintf(buff, sizeof(buff), "%s/.icon_data", rom->base_path);
+    if(access(buff, F_OK) < 0)
+    {
+        char icon[MAX_ROM_NAME_LEN+1];
+        char name[MAX_ROM_NAME_LEN+1];
+        multirom_fixup_rom_name(rom, name, "default");
+        char *dash = strchr(name, '-');
+        if (dash != NULL) {
+            size_t length = dash - name;
+            strncpy(icon, name, length);
+            icon[length] = '\0';
+        } else {
+            strcpy(icon, "default");
+        }
+
+        f = fopen(buff, "we");
+        if(f)
+        {
+            fprintf(f, "predef_set\ncom.tassadar.multirommgr:drawable/romic_%s\n", icon);
+            fclose(f);
+        }
+    }
 
     f = fopen(buff, "re");
     if(!f)
